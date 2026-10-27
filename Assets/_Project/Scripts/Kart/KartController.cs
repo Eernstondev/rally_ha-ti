@@ -74,6 +74,15 @@ namespace RallyAyiti.Kart
         private float _trickAngle;
         private float _visualYaw;
 
+        // Suspension simulée : tangage à l'accélération, écrasement à l'atterrissage, vibrations du sol.
+        private float _pitch, _pitchVel, _bounce, _bounceVel, _prevSpeed;
+
+        /// <summary>Intensité des vibrations du sol (sable, terre battue : plus fort).</summary>
+        public float RoadRoughness { get => roadRoughness; set => roadRoughness = value; }
+
+        [Tooltip("Vibrations du sol : 0,02 asphalte, 0,05 sable ou terre.")]
+        [SerializeField] private float roadRoughness = 0.02f;
+
         private void Awake()
         {
             foreach (MonoBehaviour mb in GetComponents<MonoBehaviour>())
@@ -355,6 +364,7 @@ namespace RallyAyiti.Kart
         {
             if (_trickQueued) ApplyBoost(stats.trickBoostDuration);
             _trickQueued = false;
+            _bounceVel -= 3.5f;
             _trickAngle = 0f;
             Landed?.Invoke();
         }
@@ -370,7 +380,18 @@ namespace RallyAyiti.Kart
             if (_trickQueued && !_grounded) _trickAngle = Mathf.MoveTowards(_trickAngle, 360f, 900f * dt);
 
             float lean = -_input.Steer * stats.leanAngle * Speed01;
-            visual.localRotation = Quaternion.Euler(0f, _visualYaw + spin, lean + _trickAngle);
+
+            // Tangage : le nez se lève quand on accélère, plonge quand on freine. Ressort amorti.
+            float accel = (_speed - _prevSpeed) / Mathf.Max(dt, 0.0001f);
+            _prevSpeed = _speed;
+            float targetPitch = _grounded ? Mathf.Clamp(-accel * 0.35f, -5f, 5f) : 0f;
+            _pitchVel += ((targetPitch - _pitch) * 90f - _pitchVel * 12f) * dt;
+            _pitch += _pitchVel * dt;
+            _bounceVel += (-_bounce * 140f - _bounceVel * 11f) * dt;
+            _bounce += _bounceVel * dt;
+            float shake = _grounded ? (Mathf.PerlinNoise(Time.time * 18f, GetInstanceID() * 0.1f) - 0.5f) * RoadRoughness * Speed01 * 4f : 0f;
+
+            visual.localRotation = Quaternion.Euler(_pitch, _visualYaw + spin, lean + _trickAngle);
 
             // Touché : le kart décolle et retombe en tournant, comme dans les karts arcade.
             float hop = 0f;
@@ -379,7 +400,7 @@ namespace RallyAyiti.Kart
                 float k = Mathf.Clamp01((1f - _stunTimer / _stunDuration) / 0.7f);
                 hop = Mathf.Sin(k * Mathf.PI) * 1.3f;
             }
-            visual.localPosition = new Vector3(0f, hop, 0f);
+            visual.localPosition = new Vector3(0f, hop + Mathf.Max(-0.25f, _bounce * 0.12f) + shake, 0f);
         }
     }
 }

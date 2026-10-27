@@ -9,6 +9,10 @@ namespace RallyAyiti.Kart
         [SerializeField] private ParticleSystem[] driftSparks;
         [SerializeField] private ParticleSystem boostFlame;
         [SerializeField] private TrailRenderer[] skidMarks;
+        [Tooltip("Poussière ou sable soulevé par les roues arrière.")]
+        [SerializeField] private ParticleSystem dust;
+        [SerializeField] private float dustPerSecond = 45f;
+        [SerializeField] private float driftDustPerSecond = 70f;
 
         [Header("Couleurs des paliers")]
         [SerializeField] private Color noTier = new(1f, 1f, 1f, 0.6f);
@@ -47,6 +51,22 @@ namespace RallyAyiti.Kart
                     ParticleSystem.MainModule main = ps.main;
                     main.startColor = c;
                 }
+            }
+
+            if (dust != null)
+            {
+                ParticleSystem.EmissionModule emission = dust.emission;
+                float rate = _kart.IsGrounded ? _kart.Speed01 * dustPerSecond + (drifting ? driftDustPerSecond : 0f) : 0f;
+                emission.rateOverTime = rate;
+                if (rate > 0.5f && !dust.isPlaying) dust.Play();
+            }
+
+            if (dust != null)
+            {
+                ParticleSystem.EmissionModule emission = dust.emission;
+                float rate = _kart.IsGrounded ? _kart.Speed01 * dustPerSecond + (drifting ? driftDustPerSecond : 0f) : 0f;
+                emission.rateOverTime = rate;
+                if (rate > 0.5f && !dust.isPlaying) dust.Play();
             }
 
             bool boosting = _kart.IsBoosting;

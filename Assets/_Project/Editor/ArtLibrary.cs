@@ -90,6 +90,9 @@ namespace RallyAyiti.EditorTools
             ["Transformer"] = new(C(0.5f, 0.52f, 0.5f), 0.5f, 0.6f),
             // Circuit
             ["Asphalt"] = new(Color.white, 0.25f, tex: "Asphalt.png", normal: "Asphalt_N.png"),
+            ["Track_Sand"] = new(Color.white, 0.12f, tex: "Track_Sand.png", normal: "Track_Sand_N.png"),
+            ["Track_Asphalt"] = new(Color.white, 0.22f, tex: "Track_Asphalt.png", normal: "Track_Asphalt_N.png"),
+            ["Skid"] = new(new Color(1f, 1f, 1f, 0.55f), 0f, tex: "Skid.png", transparent: true, unlit: true),
             ["Sand"] = new(Color.white, 0.05f, tex: "Sand.png", normal: "Sand_N.png"),
             ["Kerb"] = new(Color.white, 0.35f, tex: "Kerb.png"),
             ["Morne"] = new(Color.white, 0.05f, tex: "Hill.png", normal: "Sand_N.png"),
