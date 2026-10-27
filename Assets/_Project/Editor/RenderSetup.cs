@@ -104,7 +104,11 @@ namespace RallyAyiti.EditorTools
         {
             EnsureFolder();
             var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
-            if (profile != null) return profile;
+            if (profile != null)
+            {
+                Tune(profile);
+                return profile;
+            }
 
             profile = ScriptableObject.CreateInstance<VolumeProfile>();
             AssetDatabase.CreateAsset(profile, ProfilePath);
@@ -131,9 +135,28 @@ namespace RallyAyiti.EditorTools
             vignette.intensity.Override(0.22f);
             vignette.smoothness.Override(0.45f);
 
+            Tune(profile);
             EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssets();
             return profile;
+        }
+
+        /// <summary>Réglages actuels appliqués aussi aux profils déjà créés : couleurs vives, contraste modéré, bloom doux.</summary>
+        private static void Tune(VolumeProfile profile)
+        {
+            if (profile.TryGet(out ColorAdjustments color))
+            {
+                color.postExposure.Override(0.35f);
+                color.contrast.Override(7f);
+                color.saturation.Override(24f);
+            }
+            if (profile.TryGet(out Bloom bloom))
+            {
+                bloom.threshold.Override(1f);
+                bloom.intensity.Override(0.5f);
+            }
+            if (profile.TryGet(out Vignette vignette)) vignette.intensity.Override(0.16f);
+            EditorUtility.SetDirty(profile);
         }
 
         private static T Add<T>(VolumeProfile profile) where T : VolumeComponent

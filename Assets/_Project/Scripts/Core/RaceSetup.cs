@@ -65,6 +65,7 @@ namespace RallyAyiti.Core
             {
                 chaseCamera.Follow = target;
                 chaseCamera.LookAt = target;
+                FitCameraToVehicle(chaseCamera, Player);
                 chaseCamera.PreviousStateIsValid = false;
             }
             if (cameraFx != null) cameraFx.Kart = Player;
@@ -94,6 +95,34 @@ namespace RallyAyiti.Core
             if (ev.Kind != EventKind.KontLamont && ev.Kind != EventKind.Dwel) return;
             for (int i = 0; i < karts.Length; i++)
                 if (i != chosen && i != boss) karts[i].gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Caméra proche façon Beach Buggy, mais qui recule et monte pour les grands véhicules (le tap-tap ne doit pas
+        /// boucher la vue) : réglée d'après la hauteur et la longueur réelles du véhicule du joueur.
+        /// </summary>
+        private static void FitCameraToVehicle(CinemachineCamera cam, KartController kart)
+        {
+            var follow = cam.GetComponent<CinemachineFollow>();
+            var composer = cam.GetComponent<CinemachineRotationComposer>();
+            if (follow == null) return;
+            Renderer[] renderers = kart.GetComponentsInChildren<Renderer>();
+            Bounds b = default;
+            bool any = false;
+            foreach (Renderer r in renderers)
+            {
+                if (r is ParticleSystemRenderer || r is TrailRenderer) continue;
+                if (!any) { b = r.bounds; any = true; }
+                else b.Encapsulate(r.bounds);
+            }
+            if (!any) return;
+            float height = b.size.y;
+            float length = Mathf.Max(b.size.x, b.size.z);
+            // Référence : buggy (~1,9 m de haut, ~3,5 m de long) avec la caméra (0 ; 1,45 ; -3,7).
+            float up = Mathf.Max(0f, height - 1.9f);
+            float back = Mathf.Max(0f, length - 3.5f);
+            follow.FollowOffset = new Vector3(0f, 1.45f + up * 1.1f, -3.7f - back * 0.9f - up * 1.2f);
+            if (composer != null) composer.TargetOffset = new Vector3(0f, 0.95f + up * 0.7f, 5f);
         }
 
         private static void SwapStart(Transform a, Transform b)

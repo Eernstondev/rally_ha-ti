@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v9";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v10";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -291,7 +291,8 @@ namespace RallyAyiti.EditorTools
             sun.color = sunset ? new Color(1f, 0.7f, 0.42f) : new Color(1f, 0.93f, 0.8f);
             sun.intensity = sunset ? 1.6f : 1.8f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = sunset ? 0.7f : 0.8f;
+            // Ombres douces et pas trop sombres (rendu « jouet » lumineux à la Beach Buggy).
+            sun.shadowStrength = sunset ? 0.55f : 0.62f;
             // Le ciel peint place le soleil au même azimut (-35°) : ombres et soleil visibles concordent.
             sun.transform.rotation = Quaternion.Euler(sunset ? 14f : 38f, -35f, 0f);
             RenderSettings.sun = sun;
@@ -299,9 +300,9 @@ namespace RallyAyiti.EditorTools
             Material sky = PanoramaSky(sunset ? "Sky_Sunset" : "Sky_Day") ?? SkyMaterial();
             if (sky != null) RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = sunset ? new Color(0.52f, 0.5f, 0.66f) : new Color(0.6f, 0.72f, 0.9f);
-            RenderSettings.ambientEquatorColor = sunset ? new Color(0.78f, 0.56f, 0.42f) : new Color(0.66f, 0.66f, 0.6f);
-            RenderSettings.ambientGroundColor = sunset ? new Color(0.36f, 0.27f, 0.24f) : new Color(0.38f, 0.33f, 0.27f);
+            RenderSettings.ambientSkyColor = sunset ? new Color(0.6f, 0.56f, 0.72f) : new Color(0.66f, 0.77f, 0.95f);
+            RenderSettings.ambientEquatorColor = sunset ? new Color(0.86f, 0.62f, 0.47f) : new Color(0.74f, 0.74f, 0.68f);
+            RenderSettings.ambientGroundColor = sunset ? new Color(0.44f, 0.33f, 0.28f) : new Color(0.48f, 0.42f, 0.34f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = sunset ? new Color(0.95f, 0.7f, 0.5f) : new Color(0.74f, 0.86f, 0.96f);
@@ -995,14 +996,20 @@ namespace RallyAyiti.EditorTools
         private const int PlayerPilot = 5;
 
         /// <summary>Catalogue des pilotes, dans l'ordre du menu.</summary>
+        /// <summary>Tons de peau haïtiens (du brun clair au très foncé).</summary>
+        private static readonly Color[] SkinTones =
+        {
+            Hex(0x5a3522), Hex(0x3d2416), Hex(0x6b4127), Hex(0x2e1a10), Hex(0x4c2c1a), Hex(0x7a4b2e),
+        };
+
         private static readonly Pilot[] Pilots =
         {
-            new("Manmzèl Loudena", "MotoTaxi", 2.1f, "Driver_Moto", Hibiscus, Sun),
-            new("Bòs Wilfrid", "TapTap", 3.4f, "Driver_Car", Lagoon, Paper, "TapTap_Side_B.png"),
-            new("Nadège", "MotoTaxi", 2.1f, "Driver_Moto", Mango, Lagoon),
-            new("Judens Konpa", "Buggy", 2.8f, "Driver_Car", Violet, Paper),
-            new("Sè Naïelie", "Buggy", 2.8f, "Driver_Car", Green, Hibiscus),
-            new("Ti Djo", "TapTap", 3.4f, "Driver_Car", Sun, Hex(0x2a5bd7), "TapTap_Side_A.png"),
+            new("Manmzèl Loudena", "MotoTaxi", 2.1f, "Pilot_Loudena", Hibiscus, Sun),
+            new("Bòs Wilfrid", "TapTap", 3.4f, "Pilot_Wilfrid", Lagoon, Paper, "TapTap_Side_B.png"),
+            new("Nadège", "MotoTaxi", 2.1f, "Pilot_Nadege", Mango, Lagoon),
+            new("Judens Konpa", "Buggy", 2.8f, "Pilot_Judens", Violet, Paper),
+            new("Sè Naïelie", "Buggy", 2.8f, "Pilot_Naielie", Green, Hibiscus),
+            new("Ti Djo", "TapTap", 3.4f, "Pilot_TiDjo", Sun, Hex(0x2a5bd7), "TapTap_Side_A.png"),
         };
 
         private static KartStats StatsFor(string model) => model switch
@@ -1058,13 +1065,20 @@ namespace RallyAyiti.EditorTools
             Transform vehicle = ArtLibrary.Spawn(pilot.Model, parent, paint);
             if (vehicle == null) return null;
 
+            // Personnage rond avec visage (Quaternius) : peau haïtienne, vêtement à la couleur du pilote.
+            int index = System.Array.IndexOf(Pilots, pilot);
             var outfit = new Dictionary<string, Material>
             {
                 ["Drv_Helmet"] = ArtLibrary.Get("Drv_Helmet", pilot.Helmet),
                 ["Drv_Shirt"] = ArtLibrary.Get("Drv_Shirt", pilot.Shirt),
+                ["Q_Shirt"] = ArtLibrary.Get("Q_Shirt", pilot.Helmet),
+                ["Q_Main"] = ArtLibrary.Get("Q_Main", pilot.Helmet),
+                ["Q_Pants"] = ArtLibrary.Get("Q_Pants", Color.Lerp(pilot.Shirt, Night, 0.55f)),
+                ["Q_Skin"] = ArtLibrary.Get("Q_Skin", SkinTones[Mathf.Max(0, index) % SkinTones.Length]),
             };
             Transform seat = ArtLibrary.FindDeep(vehicle, "Seat");
-            Transform driver = ArtLibrary.Spawn(pilot.Driver, vehicle, outfit);
+            string driverModel = ArtLibrary.HasModel(pilot.Driver) ? pilot.Driver : pilot.Model == "MotoTaxi" ? "Driver_Moto" : "Driver_Car";
+            Transform driver = ArtLibrary.Spawn(driverModel, vehicle, outfit);
             if (driver != null && seat != null)
             {
                 driver.position = seat.position;
