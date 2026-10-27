@@ -29,6 +29,8 @@ namespace RallyAyiti.UI
         [SerializeField] private RectTransform powerFill;
         [SerializeField] private Text powerLabel;
         [SerializeField] private Image powerBackground;
+        [Tooltip("Halo qui s'allume autour du bouton quand le pouvoir est prêt.")]
+        [SerializeField] private Image powerHalo;
         [SerializeField] private CanvasGroup splat;
         [Header("Arrivée")]
         [SerializeField] private GameObject resultsPanel;
@@ -72,6 +74,7 @@ namespace RallyAyiti.UI
         }
 
         private PilotPower _power;
+        private Image _powerFillImage;
         private float _standingsTimer, _splat;
 
         private void OnCoins(int coins)
@@ -101,7 +104,16 @@ namespace RallyAyiti.UI
 
             if (_power != null && powerFill != null)
             {
-                powerFill.anchorMax = new Vector2(1f, _power.Charge01);
+                // Jauge ronde (image « Filled ») ou ancienne jauge rectangulaire qui monte.
+                if (_powerFillImage == null) _powerFillImage = powerFill.GetComponent<Image>();
+                if (_powerFillImage != null && _powerFillImage.type == Image.Type.Filled) _powerFillImage.fillAmount = _power.Charge01;
+                else powerFill.anchorMax = new Vector2(1f, _power.Charge01);
+                if (powerHalo != null)
+                {
+                    Color h = powerHalo.color;
+                    h.a = _power.Ready ? 0.55f + 0.45f * Mathf.Sin(Time.time * 6f) : 0f;
+                    powerHalo.color = h;
+                }
                 if (powerBackground != null)
                 {
                     // Opaque tant que la jauge se remplit ; quand elle est pleine, le contour doré clignote à travers.

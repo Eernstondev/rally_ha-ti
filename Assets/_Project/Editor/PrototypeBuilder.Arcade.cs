@@ -133,18 +133,24 @@ namespace RallyAyiti.EditorTools
             // Bouton de pouvoir : carré doré qui se remplit, simule la gâchette gauche de la manette.
             RectTransform button = Panel(canvas, "Pouvwa", new Vector2(1f, 0f), new Vector2(-490f, 330f), new Vector2(170f, 170f),
                 new Color(Night.r, Night.g, Night.b, 0.9f), Sun);
+            Image halo = RoundLayer(button, "Lalimye", "UI_Halo.png", Sun, -40f);
+            halo.transform.SetAsFirstSibling();
             var fillGo = new GameObject("Jaj", typeof(RectTransform));
             fillGo.transform.SetParent(button, false);
             var fill = (RectTransform)fillGo.transform;
             fill.anchorMin = Vector2.zero;
-            fill.anchorMax = new Vector2(1f, 0f);
-            fill.offsetMin = new Vector2(8f, 8f);
-            fill.offsetMax = new Vector2(-8f, -8f);
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = new Vector2(10f, 10f);
+            fill.offsetMax = new Vector2(-10f, -10f);
             var fillImg = fillGo.AddComponent<Image>();
-            fillImg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            fillImg.type = Image.Type.Sliced;
-            fillImg.color = new Color(Sun.r, Sun.g, Sun.b, 0.85f);
+            fillImg.sprite = ArtLibrary.LoadSprite("UI_Round.png");
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Vertical;
+            fillImg.fillOrigin = (int)Image.OriginVertical.Bottom;
+            fillImg.fillAmount = 0f;
+            fillImg.color = new Color(Sun.r, Sun.g, Sun.b, 0.9f);
             fillImg.raycastTarget = false;
+            MakeRound(button.GetComponent<Image>(), Sun);
             var onScreen = button.gameObject.AddComponent<OnScreenButton>();
             SetString(onScreen, "m_ControlPath", "<Gamepad>/leftShoulder");
             Text label = Label(button, "Teks", display, 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(160f, 160f), Paper);
@@ -156,6 +162,7 @@ namespace RallyAyiti.EditorTools
             SetRef(hud, "powerFill", fill);
             SetRef(hud, "powerLabel", label);
             SetRef(hud, "powerBackground", button.GetComponent<Image>());
+            SetRef(hud, "powerHalo", halo);
             SetRef(hud, "splat", splat);
         }
 
@@ -193,9 +200,21 @@ namespace RallyAyiti.EditorTools
             // Flèches de virage, à mi-hauteur sur les bords de l'écran.
             CanvasGroup Arrow(string name, string caption, Vector2 anchor, Vector2 pos)
             {
-                Text t = Label(canvas, name, display, 150, TextAnchor.MiddleCenter, anchor, pos, new Vector2(300f, 200f), Sun);
-                t.text = caption;
-                var group = t.gameObject.AddComponent<CanvasGroup>();
+                var go = new GameObject(name, typeof(RectTransform));
+                go.transform.SetParent(canvas, false);
+                var rt = (RectTransform)go.transform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+                rt.anchoredPosition = pos;
+                rt.sizeDelta = new Vector2(230f, 230f);
+                if (caption == "<<") rt.localScale = new Vector3(-1f, 1f, 1f);
+                var img = go.AddComponent<Image>();
+                img.sprite = ArtLibrary.LoadSprite("UI_Chevron.png");
+                img.color = Sun;
+                img.raycastTarget = false;
+                var shadow = go.AddComponent<Shadow>();
+                shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
+                shadow.effectDistance = new Vector2(5f, -5f);
+                var group = go.AddComponent<CanvasGroup>();
                 group.alpha = 0f;
                 group.blocksRaycasts = false;
                 return group;
@@ -210,6 +229,7 @@ namespace RallyAyiti.EditorTools
             // Pause : petit bouton rond à droite de la case bonus, panneau centré.
             Button pauseButton = UiButton(canvas, "Poz", "II", display, new Vector2(0.5f, 1f), new Vector2(150f, -40f), new Vector2(84f, 84f),
                 new Color(Night.r, Night.g, Night.b, 0.85f), Paper);
+            MakeRound(pauseButton.GetComponent<Image>(), new Color(1f, 1f, 1f, 0.6f));
             RectTransform panel = Panel(canvas, "MeniPoz", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 560f),
                 new Color(Night.r, Night.g, Night.b, 0.94f), Sun);
             Label(panel, "Tit", display, 64, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(560f, 90f), Sun).text = "POZ";
@@ -223,6 +243,35 @@ namespace RallyAyiti.EditorTools
             SetRef(pause, "resumeButton", resume);
             SetRef(pause, "retryButton", retry);
             SetRef(pause, "menuButton", menu);
+        }
+
+        /// <summary>Remplace un fond rectangulaire par un disque glacé, avec un anneau lumineux optionnel.</summary>
+        private static void MakeRound(Image image, Color? ring)
+        {
+            Sprite round = ArtLibrary.LoadSprite("UI_Round.png");
+            if (round == null) return;
+            image.sprite = round;
+            image.type = Image.Type.Simple;
+            var outline = image.GetComponent<Outline>();
+            if (outline != null) Object.DestroyImmediate(outline);
+            if (ring is { } c) RoundLayer(image.transform, "Kontou", "UI_RoundRing.png", c, -6f);
+        }
+
+        /// <summary>Calque rond posé sur (ou autour de) un élément : anneau, halo.</summary>
+        private static Image RoundLayer(Transform parent, string name, string sprite, Color color, float outset)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(outset, outset);
+            rt.offsetMax = new Vector2(-outset, -outset);
+            var img = go.AddComponent<Image>();
+            img.sprite = ArtLibrary.LoadSprite(sprite);
+            img.color = color;
+            img.raycastTarget = false;
+            return img;
         }
 
         private static void SetColorArray(Object target, string field, Color[] values)

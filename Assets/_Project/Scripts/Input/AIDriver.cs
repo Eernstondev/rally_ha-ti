@@ -1,6 +1,7 @@
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
+using RallyAyiti.Race;
 
 namespace RallyAyiti.Kart
 {
@@ -33,7 +34,41 @@ namespace RallyAyiti.Kart
             _length = Mathf.Max(1f, racingLine.CalculateLength());
         }
 
-        private void Start() => _kart.SpeedScale = skill;
+        [Header("Rattrapage (rubber band)")]
+        [Tooltip("Bonus de vitesse max quand le kart est loin derrière le joueur.")]
+        [SerializeField] private float catchUpBoost = 0.1f;
+        [Tooltip("Ralentissement max quand il est loin devant (laisse une chance au joueur).")]
+        [SerializeField] private float leadPenalty = 0.04f;
+        [Tooltip("Écart (en checkpoints) pour lequel l'effet est maximal.")]
+        [SerializeField] private float gapForFullEffect = 4f;
+
+        private LapTracker _self;
+        private float _baseScale;
+
+        private void Start()
+        {
+            _self = GetComponent<LapTracker>();
+            // Le joueur en pilote automatique (Taptap fou) garde ses améliorations de garage.
+            _baseScale = IsPlayer ? _kart.SpeedScale : skill;
+            _kart.SpeedScale = _baseScale;
+        }
+
+        private bool IsPlayer => _self != null && _self.IsPlayer;
+
+        private void Update()
+        {
+            if (IsPlayer) return;
+            RaceManager race = RaceManager.Current;
+            LapTracker player = race != null ? race.Player : null;
+            if (player == null || _self == null || player.Finished || _self.Finished)
+            {
+                _kart.SpeedScale = _baseScale;
+                return;
+            }
+            float gap = (player.Progress - _self.Progress) / gapForFullEffect;
+            float factor = gap >= 0f ? 1f + catchUpBoost * Mathf.Clamp01(gap) : 1f - leadPenalty * Mathf.Clamp01(-gap);
+            _kart.SpeedScale = _baseScale * factor;
+        }
 
         public KartInput ReadInput()
         {

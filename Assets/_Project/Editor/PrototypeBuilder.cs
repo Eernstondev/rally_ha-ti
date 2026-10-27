@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v6";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v7";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -62,6 +62,8 @@ namespace RallyAyiti.EditorTools
             public bool SandTrack;
             // Ambiance : coucher de soleil doré (soleil bas, lumière orange) au lieu du plein jour.
             public bool Sunset;
+            // Rue haïtienne : pavés, trottoirs, rangées de maisons à galerie, portique damier.
+            public bool Street;
 
             public bool LandOk(Vector3 p) => !Coast || p.x < CoastX - 55f;
         }
@@ -74,11 +76,11 @@ namespace RallyAyiti.EditorTools
                 new(0, 0), new(60, 0), new(110, 10), new(140, 45), new(130, 90), new(95, 105), new(70, 85),
                 new(45, 95), new(20, 130), new(-30, 135), new(-70, 110), new(-80, 60), new(-60, 20), new(-30, 5),
             },
-            Houses = 38, Palms = 55, Stalls = 10, WallRuns = 14, Tires = 26, Hills = 12,
+            Houses = 18, Palms = 55, Stalls = 10, WallRuns = 14, Tires = 26, Hills = 12,
             RampT = 0.55f, Boosts = new[] { (0.2f, 0f), (0.8f, -3f) }, ItemRows = new[] { 0.1f, 0.42f, 0.7f },
             Dry = 0.55f, Trees = 90, Bushes = 150, Flowers = 60, Bananas = 70, Grass = 750, Rocks = 60, Fences = 30,
             Villages = 9, Parked = 16, Billboards = 5, Ambience = "Ambience_City",
-            Relief = 6f, SandTrack = false, Sunset = true,
+            Relief = 6f, SandTrack = false, Sunset = true, Street = true,
         };
 
         private static readonly Theme Labadie = new()
@@ -190,6 +192,7 @@ namespace RallyAyiti.EditorTools
 
             SplineContainer line = CreateRacingLine(th);
             Frame[] frames = SampleTrack(line);
+            _streetFrames = th.Street ? frames : null;
 
             CreatePaintedGround(th, frames);
             if (th.Coast) CreateSea(th, frames, m);
@@ -197,6 +200,7 @@ namespace RallyAyiti.EditorTools
             CreateWalls(frames, m);
             CreateBorders(th, frames);
             CreateStartLine(line, m);
+            if (th.Street) CreateCheckerGate(line);
             Transform checkpoints = CreateCheckpoints(line);
             CreateRamp(line, th.RampT, m);
             foreach ((float t, float lateral) in th.Boosts) CreateBoostPad(line, t, lateral, m);
@@ -484,6 +488,11 @@ namespace RallyAyiti.EditorTools
 
         private static void CreateRoad(Theme th, Frame[] f, Mats m)
         {
+            if (th.Street)
+            {
+                CreateStreet(f);
+                return;
+            }
             Material surface = ArtLibrary.Get(th.SandTrack ? "Track_Sand" : "Track_Asphalt");
             CreateFlatStrip("Wout", f, -HalfWidth, HalfWidth, 0.02f, th.SandTrack ? 7f : 5f, surface, true, th.SandTrack);
             if (th.SandTrack) return; // Piste de plage : pas de bordures peintes, le sable rejoint la plage.
@@ -668,6 +677,7 @@ namespace RallyAyiti.EditorTools
         {
             var root = new GameObject("Katye").transform;
             PlaceStalls(th, f, root);
+            if (th.Street) PlaceStreetRows(th, f, root);
             PlaceHouses(th, f, root);
             PlaceBlockWalls(th, f, root);
             PlacePoles(th, f, root);
@@ -1006,7 +1016,7 @@ namespace RallyAyiti.EditorTools
             MangoTrap banana, HomingRocket rocket)
         {
             float[] lanes = { 0f, -0.5f, 0.5f, -0.3f, 0.3f, 0.15f };
-            float[] skills = { 0.99f, 0.96f, 0.94f, 0.97f, 0.93f, 0.95f };
+            float[] skills = { 1.01f, 0.99f, 0.97f, 1f, 0.96f, 0.98f };
 
             float length = line.CalculateLength();
             var karts = new KartController[Pilots.Length];
@@ -1074,6 +1084,8 @@ namespace RallyAyiti.EditorTools
 
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root.transform, false);
+            // Karts un peu plus gros que nature : plus lisibles avec la caméra basse (esprit Beach Buggy).
+            visual.localScale = Vector3.one * 1.15f;
             Transform vehicle = SpawnPilotModel(pilot, visual);
 
             float back = -pilot.Length * 0.42f;
@@ -1313,6 +1325,7 @@ namespace RallyAyiti.EditorTools
             var outline = slotGo.AddComponent<Outline>();
             outline.effectColor = Sun;
             outline.effectDistance = new Vector2(4f, -4f);
+            MakeRound(bg, Sun);
 
             var iconGo = new GameObject("Ikon", typeof(RectTransform));
             iconGo.transform.SetParent(slot, false);
@@ -1379,13 +1392,15 @@ namespace RallyAyiti.EditorTools
             var image = go.AddComponent<Image>();
             image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             image.type = Image.Type.Sliced;
-            image.color = new Color(Night.r, Night.g, Night.b, 0.55f);
+            image.color = new Color(Night.r, Night.g, Night.b, 0.5f);
+            MakeRound(image, new Color(1f, 1f, 1f, 0.45f));
 
             // Champ sérialisé : évite de créer une manette virtuelle pendant la construction dans l'éditeur.
             var button = go.AddComponent<OnScreenButton>();
             SetString(button, "m_ControlPath", controlPath);
 
-            Text label = Label(go.transform, "Teks", font, caption.Length > 1 ? 40 : 90, TextAnchor.MiddleCenter,
+            int fontSize = caption.Length > 1 ? Mathf.Min(40, Mathf.RoundToInt(size * 1.5f / caption.Length)) : 90;
+            Text label = Label(go.transform, "Teks", font, fontSize, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size, size), Paper);
             label.text = caption;
         }
