@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v5";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v6";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -60,6 +60,8 @@ namespace RallyAyiti.EditorTools
             // Réalisme : relief (m), piste en sable tassé plutôt qu'en asphalte.
             public float Relief;
             public bool SandTrack;
+            // Ambiance : coucher de soleil doré (soleil bas, lumière orange) au lieu du plein jour.
+            public bool Sunset;
 
             public bool LandOk(Vector3 p) => !Coast || p.x < CoastX - 55f;
         }
@@ -76,7 +78,7 @@ namespace RallyAyiti.EditorTools
             RampT = 0.55f, Boosts = new[] { (0.2f, 0f), (0.8f, -3f) }, ItemRows = new[] { 0.1f, 0.42f, 0.7f },
             Dry = 0.55f, Trees = 90, Bushes = 150, Flowers = 60, Bananas = 70, Grass = 750, Rocks = 60, Fences = 30,
             Villages = 9, Parked = 16, Billboards = 5, Ambience = "Ambience_City",
-            Relief = 6f, SandTrack = false,
+            Relief = 6f, SandTrack = false, Sunset = true,
         };
 
         private static readonly Theme Labadie = new()
@@ -184,7 +186,7 @@ namespace RallyAyiti.EditorTools
 
             ConfigureQuality();
             Mats m = CreateMaterials();
-            CreateLighting();
+            CreateLighting(th);
 
             SplineContainer line = CreateRacingLine(th);
             Frame[] frames = SampleTrack(line);
@@ -221,7 +223,7 @@ namespace RallyAyiti.EditorTools
             CreateHills(th, frames, m);
             (CinemachineCamera chase, KartCameraFx camFx) = CreateCamera(player);
             CreatePostFx();
-            CreateHud(race);
+            CreateHud(race, line);
             CreateRaceAudio(th, race);
 
             var setup = new GameObject("RaceSetup").AddComponent<RaceSetup>();
@@ -249,6 +251,7 @@ namespace RallyAyiti.EditorTools
                 bool ok = ArtImport.IsSprite(file) ? importer.textureType == TextureImporterType.Sprite
                     : ArtImport.IsCutout(file) || file == "Foam" ? importer.alphaIsTransparency
                     : file == "Water_Gradient" ? importer.wrapModeV == TextureWrapMode.Clamp
+                    : ArtImport.IsSky(file) ? importer.maxTextureSize == 4096
                     : true;
                 if (!ok) AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             }
@@ -274,28 +277,57 @@ namespace RallyAyiti.EditorTools
             QualitySettings.antiAliasing = 4;
         }
 
-        private static void CreateLighting()
+        /// <summary>Soleil, ciel panoramique et ambiance. Plein jour par défaut, coucher de soleil doré si le thème le demande.</summary>
+        private static void CreateLighting(Theme th = null)
         {
+            bool sunset = th != null && th.Sunset;
             var sun = new GameObject("Soley").AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.color = new Color(1f, 0.92f, 0.8f);
-            sun.intensity = 1.75f;
+            sun.color = sunset ? new Color(1f, 0.7f, 0.42f) : new Color(1f, 0.93f, 0.8f);
+            sun.intensity = sunset ? 1.6f : 1.8f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.8f;
-            sun.transform.rotation = Quaternion.Euler(38f, -35f, 0f);
+            sun.shadowStrength = sunset ? 0.7f : 0.8f;
+            // Le ciel peint place le soleil au même azimut (-35°) : ombres et soleil visibles concordent.
+            sun.transform.rotation = Quaternion.Euler(sunset ? 14f : 38f, -35f, 0f);
             RenderSettings.sun = sun;
 
-            Material sky = SkyMaterial();
+            Material sky = PanoramaSky(sunset ? "Sky_Sunset" : "Sky_Day") ?? SkyMaterial();
             if (sky != null) RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.62f, 0.72f, 0.86f);
-            RenderSettings.ambientEquatorColor = new Color(0.62f, 0.6f, 0.55f);
-            RenderSettings.ambientGroundColor = new Color(0.38f, 0.33f, 0.27f);
+            RenderSettings.ambientSkyColor = sunset ? new Color(0.52f, 0.5f, 0.66f) : new Color(0.6f, 0.72f, 0.9f);
+            RenderSettings.ambientEquatorColor = sunset ? new Color(0.78f, 0.56f, 0.42f) : new Color(0.66f, 0.66f, 0.6f);
+            RenderSettings.ambientGroundColor = sunset ? new Color(0.36f, 0.27f, 0.24f) : new Color(0.38f, 0.33f, 0.27f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.76f, 0.86f, 0.94f);
+            RenderSettings.fogColor = sunset ? new Color(0.95f, 0.7f, 0.5f) : new Color(0.74f, 0.86f, 0.96f);
             RenderSettings.fogStartDistance = 180f;
-            RenderSettings.fogEndDistance = 620f;
+            RenderSettings.fogEndDistance = sunset ? 520f : 620f;
+        }
+
+        /// <summary>Skybox panoramique (texture équirectangulaire peinte, nuages et soleil inclus).</summary>
+        private static Material PanoramaSky(string texture)
+        {
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtLibrary.ArtRoot}/Textures/{texture}.png");
+            Shader shader = Shader.Find("Skybox/Panoramic");
+            if (tex == null || shader == null) return null;
+            string path = $"{Root}/Materials/{texture}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.shader = shader;
+            mat.SetTexture("_MainTex", tex);
+            mat.SetFloat("_Mapping", 1f);     // latitude-longitude
+            mat.SetFloat("_ImageType", 0f);   // 360°
+            mat.SetFloat("_MirrorOnBack", 0f);
+            mat.SetFloat("_Layout", 0f);
+            mat.SetFloat("_Rotation", 0f);
+            mat.SetFloat("_Exposure", 1.05f);
+            mat.SetColor("_Tint", new Color(0.5f, 0.5f, 0.5f)); // 0,5 = neutre pour ce shader
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         private static void CreatePostFx()
@@ -1088,6 +1120,7 @@ namespace RallyAyiti.EditorTools
             bool sand = _th != null && _th.SandTrack;
             SetRef(fx, "dust", DustTrail(root.transform, new Vector3(0f, 0.25f, back),
                 sand ? new Color(0.86f, 0.77f, 0.6f, 0.55f) : new Color(0.62f, 0.55f, 0.47f, 0.4f)));
+            SetRef(fx, "smoke", DriftSmoke(root.transform, new Vector3(0f, 0.35f, back)));
             SetRefArray(fx, "skidMarks", new Object[]
             {
                 SkidTrail(root.transform, new Vector3(-0.45f, 0.05f, back * 0.85f)),
@@ -1176,13 +1209,13 @@ namespace RallyAyiti.EditorTools
             vc.Follow = target;
             vc.LookAt = target;
             LensSettings lens = vc.Lens;
-            lens.FieldOfView = 62f;
+            lens.FieldOfView = 60f;
             lens.FarClipPlane = 700f;
             vc.Lens = lens;
 
             var follow = vcGo.AddComponent<CinemachineFollow>();
-            // Caméra basse et proche, le kart bien visible : l'esprit des karts arcade mobiles.
-            follow.FollowOffset = new Vector3(0f, 2.4f, -6.2f);
+            // Caméra basse et proche, juste derrière le kart, le regard loin devant (façon Beach Buggy).
+            follow.FollowOffset = new Vector3(0f, 1.75f, -4.8f);
             TrackerSettings tracker = follow.TrackerSettings;
             tracker.BindingMode = BindingMode.LockToTargetWithWorldUp;
             tracker.PositionDamping = new Vector3(0.2f, 0.3f, 0.35f);
@@ -1190,7 +1223,7 @@ namespace RallyAyiti.EditorTools
             follow.TrackerSettings = tracker;
 
             var composer = vcGo.AddComponent<CinemachineRotationComposer>();
-            composer.TargetOffset = new Vector3(0f, 1.0f, 2.6f);
+            composer.TargetOffset = new Vector3(0f, 1.05f, 4.5f);
 
             var shake = vcGo.AddComponent<CinemachineBasicMultiChannelPerlin>();
             shake.NoiseProfile = ShakeProfile();
@@ -1200,11 +1233,11 @@ namespace RallyAyiti.EditorTools
             SetRef(fx, "cam", vc);
             SetRef(fx, "kart", player);
             SetRef(fx, "noise", shake);
-            SetFloat(fx, "baseFov", 62f);
+            SetFloat(fx, "baseFov", 60f);
             return (vc, fx);
         }
 
-        private static void CreateHud(RaceManager race)
+        private static void CreateHud(RaceManager race, SplineContainer line)
         {
             var canvasGo = new GameObject("HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
@@ -1218,8 +1251,8 @@ namespace RallyAyiti.EditorTools
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Font display = DisplayFont();
-            Text position = Label(canvas, "Plas", display, 96, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(400f, 120f), Sun);
-            Text lap = Label(canvas, "Tou", display, 44, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(44f, -150f), new Vector2(400f, 60f), Paper);
+            Text position = Label(canvas, "Plas", display, 80, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(400f, 120f), Sun);
+            Text lap = Label(canvas, "Tou", display, 36, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(44f, -128f), new Vector2(400f, 60f), Paper);
             Text time = Label(canvas, "Kwonomet", display, 44, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -30f), new Vector2(400f, 60f), Paper);
             Text speed = Label(canvas, "Vites", display, 40, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -95f), new Vector2(400f, 60f), Paper);
             Text center = Label(canvas, "MesajSantral", display, 140, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), new Vector2(1600f, 240f), Sun);
@@ -1243,6 +1276,7 @@ namespace RallyAyiti.EditorTools
 
             CreateArcadeHud(canvas, hud, font, display);
             CreateResultsPanel(canvas, hud, font, display);
+            CreateRaceGuides(canvas, race, line, display);
         }
 
         private static void CreateResultsPanel(Transform canvas, RaceHUD hud, Font font, Font display)

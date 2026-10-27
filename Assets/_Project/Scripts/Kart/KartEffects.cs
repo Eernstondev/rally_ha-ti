@@ -13,6 +13,9 @@ namespace RallyAyiti.Kart
         [SerializeField] private ParticleSystem dust;
         [SerializeField] private float dustPerSecond = 45f;
         [SerializeField] private float driftDustPerSecond = 70f;
+        [Tooltip("Fumée blanche des roues arrière pendant les dérapages.")]
+        [SerializeField] private ParticleSystem smoke;
+        [SerializeField] private float smokePerSecond = 38f;
 
         [Header("Couleurs des paliers")]
         [SerializeField] private Color noTier = new(1f, 1f, 1f, 0.6f);
@@ -53,12 +56,13 @@ namespace RallyAyiti.Kart
                 }
             }
 
-            if (dust != null)
+            if (smoke != null)
             {
-                ParticleSystem.EmissionModule emission = dust.emission;
-                float rate = _kart.IsGrounded ? _kart.Speed01 * dustPerSecond + (drifting ? driftDustPerSecond : 0f) : 0f;
+                // Grosse fumée blanche de dérapage, plus dense à chaque palier.
+                ParticleSystem.EmissionModule emission = smoke.emission;
+                float rate = drifting ? smokePerSecond * (0.6f + 0.25f * Mathf.Max(0, _kart.DriftTier)) * Mathf.Max(0.4f, _kart.Speed01) : 0f;
                 emission.rateOverTime = rate;
-                if (rate > 0.5f && !dust.isPlaying) dust.Play();
+                if (rate > 0.5f && !smoke.isPlaying) smoke.Play();
             }
 
             if (dust != null)
