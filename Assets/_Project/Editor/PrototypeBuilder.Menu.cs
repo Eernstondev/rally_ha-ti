@@ -63,6 +63,7 @@ namespace RallyAyiti.EditorTools
             Occupied.Clear();
             _th = null;
             _hf = null;
+            _streetFrames = null;
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             UnityEngine.Random.InitState(7);

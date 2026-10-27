@@ -16,6 +16,8 @@ namespace RallyAyiti.EditorTools
         /// <summary>Circuit en cours de construction (null pour le menu : sol plat).</summary>
         private static Theme _th;
         private static float[] _hf;
+        /// <summary>Tracé du circuit en mode rue : sert à poser les objets sur le trottoir surélevé.</summary>
+        private static Frame[] _streetFrames;
         private static int _hfNx, _hfNz;
         private static float _hfX0, _hfZ0;
 
@@ -49,6 +51,12 @@ namespace RallyAyiti.EditorTools
         private static Vector3 OnGround(Vector3 p)
         {
             p.y = GroundY(p.x, p.z);
+            if (_streetFrames != null)
+            {
+                // Sur le trottoir : le sol est 15 cm sous la piste, le trottoir 16 cm au-dessus.
+                float d = MinDistanceToTrack(_streetFrames, p);
+                if (d > HalfWidth - 0.2f && d < HalfWidth + SidewalkWidth + 0.3f) p.y += 0.15f + SidewalkHeight;
+            }
             return p;
         }
 
@@ -91,7 +99,9 @@ namespace RallyAyiti.EditorTools
                     d = q.magnitude;
                     trackY = Mathf.Lerp(a.y, b.y, s);
                 }
-                float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HalfWidth + 1.5f, HalfWidth + 26f, d));
+                // En ville, le sol reste plat sous les trottoirs et les maisons avant de rejoindre les mornes.
+                bool street = _th != null && _th.Street;
+                float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HalfWidth + (street ? 16f : 1.5f), HalfWidth + (street ? 40f : 26f), d));
                 float h = Mathf.Lerp(trackY - 0.15f, RawHeight(x, z), w);
                 int k = iz * _hfNx + ix;
                 heights[k] = h;
@@ -122,6 +132,7 @@ namespace RallyAyiti.EditorTools
         /// </summary>
         private static void CreateBorders(Theme th, Frame[] f)
         {
+            if (th.Street) return; // En ville, les trottoirs et les façades bordent la piste.
             var root = new GameObject("Bodi").transform;
             string[] kinds = th.SandTrack
                 ? new[] { "Fence", "Fence", "Rock", "Rock", "TireStack", "None" }
