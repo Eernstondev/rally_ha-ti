@@ -1,4 +1,5 @@
 using RallyAyiti.Kart;
+using RallyAyiti.Core;
 using RallyAyiti.Race;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -28,6 +29,12 @@ namespace RallyAyiti.Core
         private void Awake()
         {
             if (karts == null || karts.Length == 0) return;
+#if UNITY_EDITOR
+            // Test automatique de l'éditeur : épreuve de carrière imposée (« série,épreuve »).
+            string forced = UnityEditor.SessionState.GetString("RallyAyiti.TestEvent", "");
+            string[] parts = forced.Split(',');
+            if (parts.Length == 2 && int.TryParse(parts[0], out int s) && int.TryParse(parts[1], out int e)) Career.Current = (s, e);
+#endif
             int chosen = GameSettings.Pilot;
             if (chosen < 0 || chosen >= karts.Length) chosen = Mathf.Clamp(defaultPilot, 0, karts.Length - 1);
 
@@ -47,6 +54,7 @@ namespace RallyAyiti.Core
             }
 
             Player = karts[chosen];
+            ApplyCareerEvent(chosen);
             if (vehicles != null && chosen < vehicles.Length)
             {
                 string v = vehicles[chosen];
@@ -64,6 +72,28 @@ namespace RallyAyiti.Core
             Camera main = Camera.main;
             if (main != null)
                 main.transform.SetPositionAndRotation(target.position - target.forward * 8f + Vector3.up * 3.5f, target.rotation);
+        }
+
+        /// <summary>
+        /// Épreuve de carrière : nombre de tours ; contre la montre = seul en piste ; duel = le joueur contre le boss
+        /// (un peu plus rapide), les autres karts sont retirés avant que le RaceManager ne compte les concurrents.
+        /// </summary>
+        private void ApplyCareerEvent(int chosen)
+        {
+            EventDef ev = Career.CurrentEvent;
+            if (ev == null) return;
+            RaceManager race = FindAnyObjectByType<RaceManager>();
+            if (race != null) race.SetTotalLaps(ev.Laps);
+
+            int boss = -1;
+            if (ev.Kind == EventKind.Dwel)
+            {
+                boss = ev.Boss >= 0 && ev.Boss < karts.Length && ev.Boss != chosen ? ev.Boss : (chosen + 1) % karts.Length;
+                if (karts[boss].TryGetComponent(out AIDriver ai)) ai.SetSkill(1.05f);
+            }
+            if (ev.Kind != EventKind.KontLamont && ev.Kind != EventKind.Dwel) return;
+            for (int i = 0; i < karts.Length; i++)
+                if (i != chosen && i != boss) karts[i].gameObject.SetActive(false);
         }
 
         private static void SwapStart(Transform a, Transform b)

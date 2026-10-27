@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v8";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v9";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -1303,21 +1303,53 @@ namespace RallyAyiti.EditorTools
 
         private static void CreateResultsPanel(Transform canvas, RaceHUD hud, Font font, Font display)
         {
-            RectTransform panel = Panel(canvas, "Rezilta", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 700f),
-                new Color(Night.r, Night.g, Night.b, 0.9f), Sun);
-            Label(panel, "Tit", display, 64, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(900f, 90f), Sun).text = "REZILTA";
+            Sprite panelSprite = ArtLibrary.LoadSprite("UI_Panel.png");
+            RectTransform panel = Panel(canvas, "Rezilta", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120f, 900f),
+                new Color(0.1f, 0.27f, 0.66f, 0.96f), null);
+            if (panelSprite != null) panel.GetComponent<Image>().sprite = panelSprite;
+            Label(panel, "Tit", display, 64, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(900f, 90f), Sun).text = "REZILTA";
 
-            Text list = Label(panel, "Lis", font, 40, TextAnchor.UpperLeft, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(760f, 400f), Paper);
-            list.lineSpacing = 1.15f;
+            // Étoiles de l'épreuve de carrière (cachées en course rapide).
+            Sprite star = ArtLibrary.LoadSprite("UI_Star.png");
+            var stars = new Object[3];
+            for (int k = 0; k < 3; k++)
+            {
+                var go = new GameObject($"Zetwal{k}", typeof(RectTransform));
+                go.transform.SetParent(panel, false);
+                var rt = (RectTransform)go.transform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+                rt.anchoredPosition = new Vector2((k - 1) * 140f, k == 1 ? -112f : -130f);
+                rt.sizeDelta = Vector2.one * (k == 1 ? 140f : 120f);
+                var img = go.AddComponent<Image>();
+                img.sprite = star;
+                img.raycastTarget = false;
+                stars[k] = img;
+            }
+
+            Text list = Label(panel, "Lis", font, 34, TextAnchor.UpperLeft, new Vector2(0.5f, 1f), new Vector2(0f, -270f), new Vector2(940f, 470f), Paper);
+            list.lineSpacing = 1.1f;
             list.supportRichText = true;
+            list.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            Button retry = UiButton(panel, "Rejwe", "REJWE", display, new Vector2(0.5f, 0f), new Vector2(-190f, 50f), new Vector2(320f, 100f), Lagoon, Paper);
-            Button menu = UiButton(panel, "Meni", "MENI", display, new Vector2(0.5f, 0f), new Vector2(190f, 50f), new Vector2(320f, 100f), Hibiscus, Paper);
+            Button retry = UiButton(panel, "Rejwe", "REJWE", display, new Vector2(0.5f, 0f), new Vector2(-200f, 40f), new Vector2(340f, 110f), Lagoon, Paper);
+            Button menu = UiButton(panel, "Meni", "MENI", display, new Vector2(0.5f, 0f), new Vector2(200f, 40f), new Vector2(340f, 110f), Sun, Night);
+            if (panelSprite != null)
+                foreach (Button b in new[] { retry, menu })
+                {
+                    b.GetComponent<Image>().sprite = panelSprite;
+                    b.GetComponent<Image>().type = Image.Type.Sliced;
+                }
+
+            // Titre et objectif de l'épreuve, sous la barre de progression au départ.
+            Text eventText = Label(canvas, "Epre", display, 40, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -86f), new Vector2(1300f, 120f), Sun);
+            eventText.supportRichText = true;
 
             SetRef(hud, "resultsPanel", panel.gameObject);
             SetRef(hud, "resultsText", list);
             SetRef(hud, "retryButton", retry);
             SetRef(hud, "menuButton", menu);
+            SetRefArray(hud, "resultStars", stars);
+            SetRef(hud, "eventText", eventText);
         }
 
         private static void CreateItemSlot(Transform canvas, RaceManager race)

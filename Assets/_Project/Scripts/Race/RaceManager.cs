@@ -18,6 +18,9 @@ namespace RallyAyiti.Race
         [SerializeField] private RaceIntro intro;
 
         public int TotalLaps => totalLaps;
+
+        /// <summary>Nombre de tours imposé par l'épreuve de carrière (appelé par RaceSetup avant le départ).</summary>
+        public void SetTotalLaps(int laps) => totalLaps = Mathf.Max(1, laps);
         public int CheckpointCount => _checkpoints.Length;
         public float RaceTime { get; private set; }
         public RacePhase Phase { get; private set; } = RacePhase.Countdown;

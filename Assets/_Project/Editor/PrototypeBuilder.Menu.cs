@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using RallyAyiti.Audio;
 using RallyAyiti.Kart;
 using RallyAyiti.Race;
@@ -173,21 +174,33 @@ namespace RallyAyiti.EditorTools
             Transform canvas = CreateCanvas("Meni");
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Font display = DisplayFont();
+            Sprite panelSprite = ArtLibrary.LoadSprite("UI_Panel.png");
+            Sprite starSprite = ArtLibrary.LoadSprite("UI_Star.png");
+            Sprite lockSprite = ArtLibrary.LoadSprite("UI_Lock.png");
+            Color blue = new(0.13f, 0.38f, 0.86f);
+            Color deep = new(0.07f, 0.16f, 0.42f, 0.92f);
 
-            var logoGo = new GameObject("Logo", typeof(RectTransform));
-            logoGo.transform.SetParent(canvas, false);
-            var logoRt = (RectTransform)logoGo.transform;
-            logoRt.anchorMin = logoRt.anchorMax = logoRt.pivot = new Vector2(0f, 1f);
-            logoRt.anchoredPosition = new Vector2(36f, -20f);
-            logoRt.sizeDelta = new Vector2(560f, 224f);
-            var logo = logoGo.AddComponent<Image>();
-            logo.sprite = ArtLibrary.LoadSprite("UI_Logo.png");
+            // ---------- Accueil : grand logo, bouton JWE ----------
+            RectTransform home = MenuScreen(canvas, "Akèy");
+            Image logo = MenuImage(home, "Logo", ArtLibrary.LoadSprite("UI_Logo.png"), new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(900f, 360f));
             logo.preserveAspect = true;
-            logo.raycastTarget = false;
+            Button play = GlossyButton(home, "Jwe", "JWE", display, new Vector2(1f, 0f), new Vector2(-70f, 70f), new Vector2(380f, 170f), Sun, Night, panelSprite);
+            play.GetComponentInChildren<Text>().fontSize = 84;
+            Label(home, "Konsey", font, 28, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(900f, 44f),
+                new Color(Paper.r, Paper.g, Paper.b, 0.85f)).text = "Tape JWE pou kòmanse";
 
-            // Pilote
-            RectTransform pilot = Panel(canvas, "Pilot", new Vector2(0f, 0.5f), new Vector2(40f, -100f), new Vector2(620f, 600f),
-                new Color(Night.r, Night.g, Night.b, 0.78f), null);
+            // ---------- Centre : garage, course rapide, carrière ----------
+            RectTransform hub = MenuScreen(canvas, "Sant");
+            Button garageButton = GlossyButton(hub, "Garaj", "GARAJ", display, new Vector2(0f, 0f), new Vector2(60f, 50f), new Vector2(330f, 200f), blue, Paper, panelSprite);
+            Button quickButton = GlossyButton(hub, "KousRapid", "KOUS\nRAPID", display, new Vector2(0f, 0f), new Vector2(420f, 50f), new Vector2(330f, 200f), blue, Paper, panelSprite);
+            Button careerButton = GlossyButton(hub, "Karye", "KARYÈ", display, new Vector2(1f, 0f), new Vector2(-60f, 50f), new Vector2(460f, 240f), Sun, Night, panelSprite);
+            careerButton.GetComponentInChildren<Text>().fontSize = 80;
+            foreach (Button b in new[] { garageButton, quickButton }) b.GetComponentInChildren<Text>().fontSize = 54;
+
+            // ---------- Garage : pilote, caractéristiques, améliorations, pilote bloqué ----------
+            RectTransform garage = MenuScreen(canvas, "Garaj");
+            RectTransform pilot = Panel(garage, "Pilot", new Vector2(0f, 0.5f), new Vector2(40f, -40f), new Vector2(620f, 600f), deep, null);
+            pilot.GetComponent<Image>().sprite = panelSprite;
             Label(pilot, "Tit", display, 28, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(560f, 40f), Sun).text = "CHWAZI PILÒT";
             Text name = Label(pilot, "Non", display, 52, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(580f, 70f), Paper);
             Text vehicle = Label(pilot, "Machin", font, 32, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(560f, 44f), Lagoon);
@@ -195,22 +208,28 @@ namespace RallyAyiti.EditorTools
                 new Color(Paper.r, Paper.g, Paper.b, 0.85f));
             tagline.fontStyle = FontStyle.Italic;
             Text power = Label(pilot, "Pouvwa", font, 25, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -240f), new Vector2(580f, 40f), Sun);
-
             (RectTransform speed, Button upSpeed, Text upSpeedText) = StatRow(pilot, "Vitès", font, -300f, Sun);
             (RectTransform accel, Button upAccel, Text upAccelText) = StatRow(pilot, "Akselerasyon", font, -352f, Lagoon);
             (RectTransform handling, Button upHandling, Text upHandlingText) = StatRow(pilot, "Kontwòl", font, -404f, Hibiscus);
-
-            // Cagnotte de gourdes, en haut à droite.
-            Text gourdes = Label(canvas, "Goud", display, 48, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-44f, -30f), new Vector2(420f, 70f), Sun);
-
             var arrowBg = new Color(1f, 1f, 1f, 0.12f);
             Button prev = UiButton(pilot, "Anvan", "<", display, new Vector2(0.5f, 0f), new Vector2(-190f, 34f), new Vector2(120f, 90f), arrowBg, Paper);
             Button next = UiButton(pilot, "Apre", ">", display, new Vector2(0.5f, 0f), new Vector2(190f, 34f), new Vector2(120f, 90f), arrowBg, Paper);
             Text counter = Label(pilot, "Kont", display, 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(200f, 60f), Paper);
 
-            // Circuits
-            RectTransform tracksPanel = Panel(canvas, "Wout", new Vector2(1f, 0.5f), new Vector2(-40f, 60f), new Vector2(480f, 760f),
-                new Color(Night.r, Night.g, Night.b, 0.6f), null);
+            RectTransform lockBadge = Panel(garage, "Bloke", new Vector2(0.5f, 0f), new Vector2(130f, 50f), new Vector2(1000f, 100f),
+                new Color(Hibiscus.r, Hibiscus.g, Hibiscus.b, 0.92f), null);
+            lockBadge.GetComponent<Image>().sprite = panelSprite;
+            MenuImage(lockBadge, "Kadna", lockSprite, new Vector2(0f, 0.5f), new Vector2(20f, 0f), new Vector2(76f, 76f));
+            Text lockText = Label(lockBadge, "Teks", font, 28, TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(110f, 0f), new Vector2(870f, 90f), Paper);
+            lockText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            Button buyPilot = GlossyButton(garage, "AchtePilot", $"ACHTE\n{RallyAyiti.Core.Career.PilotPrice} G", display, new Vector2(1f, 0f), new Vector2(-60f, 40f),
+                new Vector2(330f, 140f), Sun, Night, panelSprite);
+            buyPilot.GetComponentInChildren<Text>().fontSize = 40;
+
+            // ---------- Course rapide : circuit, ALE ----------
+            RectTransform quick = MenuScreen(canvas, "Rapid");
+            RectTransform tracksPanel = Panel(quick, "Wout", new Vector2(1f, 0.5f), new Vector2(-40f, 0f), new Vector2(480f, 760f), deep, null);
+            tracksPanel.GetComponent<Image>().sprite = panelSprite;
             Label(tracksPanel, "Tit", display, 28, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(440f, 40f), Sun).text = "CHWAZI WOUT";
             (string scene, string title, string card)[] trackDefs =
             {
@@ -221,13 +240,47 @@ namespace RallyAyiti.EditorTools
             for (int i = 0; i < trackDefs.Length; i++)
                 cards[i] = TrackCard(tracksPanel, trackDefs[i].card, new Vector2(0f, -86f - i * 290f));
             Text trackTitle = Label(tracksPanel, "NonWout", display, 36, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(440f, 60f), Sun);
+            Button go = GlossyButton(quick, "Ale", "ALE !", display, new Vector2(0f, 0f), new Vector2(60f, 50f), new Vector2(460f, 170f), Sun, Night, panelSprite);
+            go.GetComponentInChildren<Text>().fontSize = 72;
 
-            Button go = UiButton(canvas, "Ale", "ALE !", display, new Vector2(1f, 0f), new Vector2(-40f, 40f), new Vector2(480f, 130f), Sun, Night);
-            go.GetComponentInChildren<Text>().fontSize = 64;
+            // ---------- Séries ----------
+            RectTransform series = MenuScreen(canvas, "Seri");
+            Backdrop(series);
+            RectTransform seriesRow = Row(series, "Kat", new Vector2(0f, 10f), new Vector2(1700f, 620f), 50f);
+            Banner(series, "Chwazi", "CHWAZI SERI W AP KOURI A", display, deep, panelSprite);
 
-            Label(canvas, "Konsey", font, 24, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(900f, 40f),
-                new Color(Paper.r, Paper.g, Paper.b, 0.75f)).text = "← →  pilòt      ↑ ↓  wout      Antre  ale";
+            // ---------- Épreuves d'une série ----------
+            RectTransform events = MenuScreen(canvas, "Epre");
+            Backdrop(events);
+            Text seriesTitle = Label(events, "TitSeri", display, 46, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(1400f, 70f), Sun);
+            RectTransform eventsRow = Row(events, "Tiil", new Vector2(0f, 150f), new Vector2(1600f, 280f), 34f);
+            RectTransform detail = Panel(events, "Detay", new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(1400f, 340f), new Color(blue.r, blue.g, blue.b, 0.95f), null);
+            detail.GetComponent<Image>().sprite = panelSprite;
+            Text detailTitle = Label(detail, "Tit", display, 46, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(900f, 64f), Paper);
+            Text detailInfo = Label(detail, "Enfo", font, 32, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -110f), new Vector2(920f, 200f), Paper);
+            detailInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
+            detailInfo.supportRichText = true;
+            detailInfo.lineSpacing = 1.2f;
+            var detailStars = new Image[3];
+            for (int k = 0; k < 3; k++)
+                detailStars[k] = MenuImage(detail, $"Zetwal{k}", starSprite, new Vector2(1f, 1f), new Vector2(-330f + k * 96f, -26f), new Vector2(88f, 88f));
+            Button detailGo = GlossyButton(detail, "Jwe", "JWE !", display, new Vector2(1f, 0f), new Vector2(-40f, 36f), new Vector2(330f, 150f), Sun, Night, panelSprite);
+            detailGo.GetComponentInChildren<Text>().fontSize = 64;
 
+            // ---------- Barre du haut : retour, étoiles, gourdes ----------
+            RectTransform top = MenuScreen(canvas, "BaAnwo");
+            Button back = UiButton(top, "Retou", "<", display, new Vector2(0f, 1f), new Vector2(26f, -20f), new Vector2(110f, 110f), blue, Paper);
+            MakeRound(back.GetComponent<Image>(), Paper);
+            back.GetComponentInChildren<Text>().fontSize = 64;
+            RectTransform starsBox = Panel(top, "Zetwal", new Vector2(1f, 1f), new Vector2(-400f, -24f), new Vector2(300f, 90f), deep, null);
+            starsBox.GetComponent<Image>().sprite = panelSprite;
+            MenuImage(starsBox, "Ikon", starSprite, new Vector2(0f, 0.5f), new Vector2(12f, 2f), new Vector2(74f, 74f)).color = Sun;
+            Text starsText = Label(starsBox, "Kont", display, 38, TextAnchor.MiddleRight, new Vector2(1f, 0.5f), new Vector2(-24f, 0f), new Vector2(200f, 70f), Paper);
+            RectTransform goudBox = Panel(top, "Goud", new Vector2(1f, 1f), new Vector2(-40f, -24f), new Vector2(340f, 90f), deep, null);
+            goudBox.GetComponent<Image>().sprite = panelSprite;
+            Text gourdes = Label(goudBox, "Kont", display, 38, TextAnchor.MiddleRight, new Vector2(1f, 0.5f), new Vector2(-24f, 0f), new Vector2(300f, 70f), Sun);
+
+            // ---------- Composants ----------
             var menu = canvas.gameObject.AddComponent<MainMenu>();
             var so = new SerializedObject(menu);
             SerializedProperty list = so.FindProperty("pilots");
@@ -278,6 +331,126 @@ namespace RallyAyiti.EditorTools
             SetRef(menu, "powerText", power);
             SetRefArray(menu, "upgradeButtons", new Object[] { upSpeed, upAccel, upHandling });
             SetRefArray(menu, "upgradeLabels", new Object[] { upSpeedText, upAccelText, upHandlingText });
+            SetRef(menu, "lockBadge", lockBadge.gameObject);
+            SetRef(menu, "lockText", lockText);
+            SetRef(menu, "buyPilotButton", buyPilot);
+
+            var flow = canvas.gameObject.AddComponent<CareerMenu>();
+            SetRef(menu, "flow", flow);
+            SetRef(flow, "home", home.gameObject);
+            SetRef(flow, "hub", hub.gameObject);
+            SetRef(flow, "garage", garage.gameObject);
+            SetRef(flow, "quick", quick.gameObject);
+            SetRef(flow, "series", series.gameObject);
+            SetRef(flow, "events", events.gameObject);
+            SetRef(flow, "topBar", top.gameObject);
+            SetRef(flow, "playButton", play);
+            SetRef(flow, "backButton", back);
+            SetRef(flow, "garageButton", garageButton);
+            SetRef(flow, "quickButton", quickButton);
+            SetRef(flow, "careerButton", careerButton);
+            SetRef(flow, "starsText", starsText);
+            SetRef(flow, "gourdesText", gourdes);
+            SetRef(flow, "seriesRow", seriesRow);
+            SetRef(flow, "eventsRow", eventsRow);
+            SetRef(flow, "seriesTitle", seriesTitle);
+            SetRef(flow, "detail", detail.gameObject);
+            SetRef(flow, "detailTitle", detailTitle);
+            SetRef(flow, "detailInfo", detailInfo);
+            SetRefArray(flow, "detailStars", detailStars.Cast<Object>().ToArray());
+            SetRef(flow, "detailGo", detailGo);
+            SetRef(flow, "font", display);
+            SetRef(flow, "panelSprite", panelSprite);
+            SetRef(flow, "starSprite", starSprite);
+            SetRef(flow, "lockSprite", lockSprite);
+            SetRefArray(flow, "seriesCards", RallyAyiti.Core.Career.Series.Select(c => (Object)ArtLibrary.LoadSprite(c.Card)).ToArray());
+        }
+
+        // ---------- Briques des écrans de menu ----------
+
+        /// <summary>Écran plein cadre (enfant direct du canvas), activé par CareerMenu.</summary>
+        private static RectTransform MenuScreen(Transform canvas, string name)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            return rt;
+        }
+
+        /// <summary>Voile sombre derrière les écrans de carrière (le plateau reste deviné derrière).</summary>
+        private static void Backdrop(Transform screen)
+        {
+            var go = new GameObject("Vwal", typeof(RectTransform));
+            go.transform.SetParent(screen, false);
+            go.transform.SetAsFirstSibling();
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            go.AddComponent<Image>().color = new Color(0.03f, 0.08f, 0.2f, 0.62f);
+        }
+
+        /// <summary>Rangée centrée qui aligne des tuiles horizontalement (séries, épreuves).</summary>
+        private static RectTransform Row(Transform parent, string name, Vector2 pos, Vector2 size, float spacing)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            var layout = go.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = spacing;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            return rt;
+        }
+
+        private static void Banner(Transform parent, string name, string text, Font font, Color color, Sprite sprite)
+        {
+            RectTransform banner = Panel(parent, name, new Vector2(0.5f, 0f), new Vector2(0f, 30f), new Vector2(1300f, 90f), color, null);
+            banner.GetComponent<Image>().sprite = sprite;
+            Label(banner, "Teks", font, 40, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1260f, 80f), Paper).text = text;
+        }
+
+        private static Image MenuImage(Transform parent, string name, Sprite sprite, Vector2 anchor, Vector2 pos, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        /// <summary>Gros bouton bleu (ou doré) glacé aux coins arrondis, façon Beach Buggy.</summary>
+        private static Button GlossyButton(Transform parent, string name, string caption, Font font, Vector2 anchor, Vector2 pos,
+            Vector2 size, Color background, Color textColor, Sprite sprite)
+        {
+            Button b = UiButton(parent, name, caption, font, anchor, pos, size, background, textColor);
+            var img = b.GetComponent<Image>();
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.type = Image.Type.Sliced;
+            }
+            var shadow = b.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.5f);
+            shadow.effectDistance = new Vector2(0f, -8f);
+            Text label = b.GetComponentInChildren<Text>();
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.lineSpacing = 0.9f;
+            return b;
         }
 
         /// <summary>
@@ -291,7 +464,10 @@ namespace RallyAyiti.EditorTools
                 new Color(1f, 1f, 1f, 0.14f), null);
             Button up = UiButton(parent, label + "Plis", "+", font, new Vector2(0f, 1f), new Vector2(484f, y + 2f), new Vector2(110f, 44f), color, Night);
             Text price = up.GetComponentInChildren<Text>();
-            price.fontSize = 22;
+            price.fontSize = 24;
+            // Petit texte : contour fin, sinon les chiffres deviennent illisibles.
+            price.GetComponent<Outline>().effectDistance = new Vector2(1f, -1f);
+            price.GetComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.35f);
             var fillGo = new GameObject("Ranpli", typeof(RectTransform));
             fillGo.transform.SetParent(bar, false);
             var fill = (RectTransform)fillGo.transform;

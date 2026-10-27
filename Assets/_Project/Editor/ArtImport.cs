@@ -42,6 +42,8 @@ namespace RallyAyiti.EditorTools
                 importer.mipmapEnabled = false;
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.maxTextureSize = 2048;
+                // Panneau glacé étirable sans déformer ses coins arrondis.
+                if (file == "UI_Panel") importer.spriteBorder = new Vector4(48f, 48f, 48f, 48f);
             }
             else if (file == "Foam")
             {

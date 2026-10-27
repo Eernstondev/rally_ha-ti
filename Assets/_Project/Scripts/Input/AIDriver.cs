@@ -55,6 +55,9 @@ namespace RallyAyiti.Kart
 
         private bool IsPlayer => _self != null && _self.IsPlayer;
 
+        /// <summary>Niveau de l'IA (vitesse max relative), à régler avant le départ : le boss d'un duel va plus vite.</summary>
+        public void SetSkill(float value) => skill = value;
+
         private void Update()
         {
             if (IsPlayer) return;
