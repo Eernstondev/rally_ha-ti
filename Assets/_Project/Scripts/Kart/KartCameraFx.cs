@@ -16,6 +16,10 @@ namespace RallyAyiti.Kart
         [SerializeField] private float speedFov = 8f;
         [SerializeField] private float boostFov = 10f;
         [SerializeField] private float smoothing = 6f;
+        [Header("Inclinaison (roulis) dans les virages")]
+        [SerializeField] private float dutchSteer = 4f;
+        [SerializeField] private float dutchDrift = 3.5f;
+        [SerializeField] private float dutchSmoothing = 4f;
         [Header("Tremblements")]
         [SerializeField] private float roadShake = 0.35f;
         [SerializeField] private float landShake = 1.6f;
@@ -61,6 +65,10 @@ namespace RallyAyiti.Kart
             float target = baseFov + speedFov * kart.Speed01 + (kart.IsBoosting ? boostFov : 0f);
             LensSettings lens = cam.Lens;
             lens.FieldOfView = Mathf.Lerp(lens.FieldOfView, target, 1f - Mathf.Exp(-smoothing * dt));
+            // L'horizon penche du côté du virage, davantage en dérapage.
+            float steer = Mathf.Clamp(kart.LastInput.Steer, -1f, 1f);
+            float dutch = steer * dutchSteer * kart.Speed01 + (kart.IsDrifting ? kart.DriftDirection * dutchDrift : 0f);
+            lens.Dutch = Mathf.Lerp(lens.Dutch, dutch, 1f - Mathf.Exp(-dutchSmoothing * dt));
             cam.Lens = lens;
 
             if (noise == null) return;

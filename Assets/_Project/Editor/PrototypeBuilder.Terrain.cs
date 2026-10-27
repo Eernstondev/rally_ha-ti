@@ -236,6 +236,25 @@ namespace RallyAyiti.EditorTools
             return ps;
         }
 
+        /// <summary>Gros nuages blancs de dérapage : bouffées larges, lentes, qui gonflent et restent un peu derrière le kart.</summary>
+        private static ParticleSystem DriftSmoke(Transform parent, Vector3 localPos)
+        {
+            ParticleSystem ps = DustTrail(parent, localPos, new Color(1f, 1f, 1f, 0.7f));
+            ps.gameObject.name = "LafimeDerapaj";
+            ParticleSystem.MainModule main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 1.6f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 2.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(1.1f, 1.9f);
+            main.gravityModifier = -0.12f;
+            main.maxParticles = 220;
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.angle = 40f;
+            shape.radius = 0.8f;
+            ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.7f, 1f, 3.2f));
+            return ps;
+        }
+
         /// <summary>Trace de pneu posée à plat sur le sol pendant les drifts.</summary>
         private static TrailRenderer SkidTrail(Transform parent, Vector3 localPos)
         {

@@ -1,3 +1,4 @@
+using System.Linq;
 using RallyAyiti.PowerUps;
 using RallyAyiti.Race;
 using RallyAyiti.UI;
@@ -156,6 +157,81 @@ namespace RallyAyiti.EditorTools
             SetRef(hud, "powerLabel", label);
             SetRef(hud, "powerBackground", button.GetComponent<Image>());
             SetRef(hud, "splat", splat);
+        }
+
+        /// <summary>Barre de progression DEPA → FINI, flèches de virage sur les bords, bouton et menu pause.</summary>
+        private static void CreateRaceGuides(Transform canvas, RaceManager race, SplineContainer line, Font display)
+        {
+            Sprite round = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+
+            // Barre de progression.
+            RectTransform bar = Panel(canvas, "Pwogresyon", new Vector2(0.5f, 1f), new Vector2(0f, -262f), new Vector2(760f, 16f),
+                new Color(Night.r, Night.g, Night.b, 0.75f), null);
+            var fillGo = new GameObject("Ranpli", typeof(RectTransform));
+            fillGo.transform.SetParent(bar, false);
+            var fill = (RectTransform)fillGo.transform;
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0f, 1f);
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
+            var fillImg = fillGo.AddComponent<Image>();
+            fillImg.color = new Color(Sun.r, Sun.g, Sun.b, 0.9f);
+            fillImg.raycastTarget = false;
+            Label(bar, "Depa", display, 22, TextAnchor.MiddleRight, new Vector2(0f, 0.5f), new Vector2(-14f, 0f), new Vector2(120f, 30f), Paper).text = "DEPA";
+            Text finish = Label(bar, "Fini", display, 22, TextAnchor.MiddleLeft, new Vector2(1f, 0.5f), new Vector2(14f, 0f), new Vector2(120f, 30f), Paper);
+            finish.text = "FINI";
+            ((RectTransform)finish.transform).pivot = new Vector2(0f, 0.5f);
+            ((RectTransform)bar.Find("Depa")).pivot = new Vector2(1f, 0.5f);
+
+            var progress = bar.gameObject.AddComponent<RaceProgressBar>();
+            SetRef(progress, "race", race);
+            SetRef(progress, "track", bar);
+            SetRef(progress, "fill", fill);
+            SetRef(progress, "markerSprite", round);
+            SetStringArray(progress, "pilotNames", Pilots.Select(p => p.Name).ToArray());
+            SetColorArray(progress, "pilotColors", Pilots.Select(p => p.Helmet).ToArray());
+
+            // Flèches de virage, à mi-hauteur sur les bords de l'écran.
+            CanvasGroup Arrow(string name, string caption, Vector2 anchor, Vector2 pos)
+            {
+                Text t = Label(canvas, name, display, 150, TextAnchor.MiddleCenter, anchor, pos, new Vector2(300f, 200f), Sun);
+                t.text = caption;
+                var group = t.gameObject.AddComponent<CanvasGroup>();
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+                return group;
+            }
+            var turns = new GameObject("FlechViraj").AddComponent<TurnIndicator>();
+            turns.transform.SetParent(canvas, false);
+            SetRef(turns, "race", race);
+            SetRef(turns, "line", line);
+            SetRef(turns, "left", Arrow("FlechGoch", "<<", new Vector2(0f, 0.5f), new Vector2(60f, -40f)));
+            SetRef(turns, "right", Arrow("FlechDwat", ">>", new Vector2(1f, 0.5f), new Vector2(-60f, -40f)));
+
+            // Pause : petit bouton rond à droite de la case bonus, panneau centré.
+            Button pauseButton = UiButton(canvas, "Poz", "II", display, new Vector2(0.5f, 1f), new Vector2(150f, -40f), new Vector2(84f, 84f),
+                new Color(Night.r, Night.g, Night.b, 0.85f), Paper);
+            RectTransform panel = Panel(canvas, "MeniPoz", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 560f),
+                new Color(Night.r, Night.g, Night.b, 0.94f), Sun);
+            Label(panel, "Tit", display, 64, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(560f, 90f), Sun).text = "POZ";
+            Button resume = UiButton(panel, "Kontinye", "KONTINYE", display, new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(420f, 96f), Green, Paper);
+            Button retry = UiButton(panel, "Rejwe", "REJWE", display, new Vector2(0.5f, 0.5f), new Vector2(0f, -76f), new Vector2(420f, 96f), Lagoon, Paper);
+            Button menu = UiButton(panel, "Meni", "MENI", display, new Vector2(0.5f, 0.5f), new Vector2(0f, -192f), new Vector2(420f, 96f), Hibiscus, Paper);
+
+            var pause = canvas.gameObject.AddComponent<PauseMenu>();
+            SetRef(pause, "pauseButton", pauseButton);
+            SetRef(pause, "panel", panel.gameObject);
+            SetRef(pause, "resumeButton", resume);
+            SetRef(pause, "retryButton", retry);
+            SetRef(pause, "menuButton", menu);
+        }
+
+        private static void SetColorArray(Object target, string field, Color[] values)
+        {
+            SerializedProperty p = Prop(target, field, out SerializedObject so);
+            if (p == null) return;
+            p.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) p.GetArrayElementAtIndex(i).colorValue = values[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void SetStringArray(Object target, string field, string[] values)

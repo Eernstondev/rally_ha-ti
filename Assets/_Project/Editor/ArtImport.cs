@@ -25,6 +25,15 @@ namespace RallyAyiti.EditorTools
             {
                 importer.textureType = TextureImporterType.NormalMap;
             }
+            else if (IsSky(file))
+            {
+                // Panorama équirectangulaire : pleine résolution, pas de mipmaps (évite la couture), pôles bloqués.
+                importer.maxTextureSize = 4096;
+                importer.mipmapEnabled = false;
+                importer.anisoLevel = 0;
+                importer.wrapModeU = TextureWrapMode.Repeat;
+                importer.wrapModeV = TextureWrapMode.Clamp;
+            }
             else if (IsSprite(file))
             {
                 importer.textureType = TextureImporterType.Sprite;
@@ -59,6 +68,9 @@ namespace RallyAyiti.EditorTools
         /// <summary>Images d'interface : icônes, cartes de circuit, logo.</summary>
         public static bool IsSprite(string file) =>
             file.StartsWith("Icon_") || file.StartsWith("Card_") || file.StartsWith("UI_");
+
+        /// <summary>Ciels panoramiques.</summary>
+        public static bool IsSky(string file) => file.StartsWith("Sky_");
 
         /// <summary>Feuillages et fanions découpés par la transparence.</summary>
         public static bool IsCutout(string file) =>
