@@ -1236,7 +1236,7 @@ namespace RallyAyiti.EditorTools
             var bg = slotGo.AddComponent<Image>();
             bg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             bg.type = Image.Type.Sliced;
-            bg.color = new Color(Night.r, Night.g, Night.b, 0.6f);
+            bg.color = new Color(Night.r, Night.g, Night.b, 0.92f);
             var outline = slotGo.AddComponent<Outline>();
             outline.effectColor = Sun;
             outline.effectDistance = new Vector2(4f, -4f);

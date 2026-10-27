@@ -43,7 +43,7 @@ namespace RallyAyiti.EditorTools
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-                File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss} {line}{Environment.NewLine}");
+                File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss} {line}{System.Environment.NewLine}");
             }
             catch (IOException)
             {
