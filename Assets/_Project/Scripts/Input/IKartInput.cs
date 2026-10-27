@@ -9,6 +9,7 @@ namespace RallyAyiti.Kart
         public bool Drift;      // maintenu
         public bool UseItem;    // pressé pendant cette image
         public bool Horn;       // pressé pendant cette image
+        public bool Power;      // pouvoir du pilote, pressé pendant cette image
     }
 
     public interface IKartInput

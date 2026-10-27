@@ -2,6 +2,8 @@ using System.Collections;
 using System.Text;
 using RallyAyiti.Audio;
 using RallyAyiti.Core;
+using RallyAyiti.Kart;
+using RallyAyiti.PowerUps;
 using RallyAyiti.Race;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,6 +23,13 @@ namespace RallyAyiti.UI
         [SerializeField] private Text timeText;
         [SerializeField] private Text speedText;
         [SerializeField] private Text centerText;
+        [Header("Façon Beach Buggy")]
+        [SerializeField] private Text standingsText;
+        [SerializeField] private Text coinsText;
+        [SerializeField] private RectTransform powerFill;
+        [SerializeField] private Text powerLabel;
+        [SerializeField] private Image powerBackground;
+        [SerializeField] private CanvasGroup splat;
         [Header("Arrivée")]
         [SerializeField] private GameObject resultsPanel;
         [SerializeField] private Text resultsText;
@@ -42,18 +51,78 @@ namespace RallyAyiti.UI
         {
             race.CountdownTick += OnCountdown;
             race.RaceEnded += OnRaceEnded;
+            race.CoinsChanged += OnCoins;
+            PowerUpSystem.Splatted += OnSplatted;
         }
 
         private void OnDisable()
         {
             race.CountdownTick -= OnCountdown;
             race.RaceEnded -= OnRaceEnded;
+            race.CoinsChanged -= OnCoins;
+            PowerUpSystem.Splatted -= OnSplatted;
+        }
+
+        private void Start()
+        {
+            OnCoins(0);
+            if (splat != null) splat.alpha = 0f;
+            if (race.Player != null) _power = race.Player.GetComponent<PilotPower>();
+            if (powerLabel != null && _power != null) powerLabel.text = _power.PowerName.ToUpperInvariant();
+        }
+
+        private PilotPower _power;
+        private float _standingsTimer, _splat;
+
+        private void OnCoins(int coins)
+        {
+            if (coinsText != null) coinsText.text = $"{coins * RaceManager.CoinValue} G";
+        }
+
+        private void OnSplatted(KartController kart)
+        {
+            if (race.Player != null && kart == race.Player.Kart) _splat = 2.2f;
+        }
+
+        private void UpdateExtras(LapTracker player)
+        {
+            if ((_standingsTimer -= Time.deltaTime) <= 0f && standingsText != null)
+            {
+                _standingsTimer = 0.2f;
+                var sb = new StringBuilder();
+                for (int i = 0; i < race.Standings.Count; i++)
+                {
+                    LapTracker r = race.Standings[i];
+                    string line = $"{i + 1}  {r.DisplayName}";
+                    sb.AppendLine(r == player ? $"<color=#f6c22b>{line}</color>" : line);
+                }
+                standingsText.text = sb.ToString();
+            }
+
+            if (_power != null && powerFill != null)
+            {
+                powerFill.anchorMax = new Vector2(1f, _power.Charge01);
+                if (powerBackground != null)
+                {
+                    float glow = _power.Ready ? 0.75f + 0.25f * Mathf.Sin(Time.time * 8f) : 0.55f;
+                    Color c = powerBackground.color;
+                    c.a = glow;
+                    powerBackground.color = c;
+                }
+            }
+
+            if (splat != null)
+            {
+                _splat = Mathf.Max(0f, _splat - Time.deltaTime);
+                splat.alpha = Mathf.Clamp01(_splat / 0.8f);
+            }
         }
 
         private void Update()
         {
             LapTracker player = race.Player;
             if (player == null) return;
+            UpdateExtras(player);
 
             int pos = race.PositionOf(player);
             if (pos != _pos) { _pos = pos; positionText.text = $"{pos}/{race.Standings.Count}"; }
@@ -102,6 +171,8 @@ namespace RallyAyiti.UI
                 string line = $"{i + 1}.  {r.DisplayName,-18} {time}";
                 sb.AppendLine(r.IsPlayer ? $"<color=#f6c22b>{line}</color>" : line);
             }
+            sb.AppendLine();
+            sb.Append($"<color=#1fb5a8>+{race.Reward} goud</color>   ({race.PlayerCoins} pyès)   Total : {GameSettings.Gourdes} G");
             resultsText.text = sb.ToString();
             resultsPanel.SetActive(true);
         }

@@ -122,6 +122,18 @@ namespace RallyAyiti.EditorTools
             ["Mango_Skin"] = new(Color.white, 0.65f, tex: "Mango_Skin.png"),
             ["Mango_Stem"] = new(C(0.3f, 0.22f, 0.1f), 0.3f),
             ["Mango_Leaf"] = new(C(0.15f, 0.45f, 0.15f), 0.5f),
+            ["Coin_Gold"] = new(C(1f, 0.78f, 0.2f), 0.75f, 1f, emission: 0.25f),
+            ["Coin_Rim"] = new(C(0.95f, 0.62f, 0.12f), 0.7f, 1f, emission: 0.2f),
+            ["Banana_Peel"] = new(C(0.98f, 0.82f, 0.2f), 0.55f),
+            ["Banana_Inner"] = new(C(0.98f, 0.93f, 0.62f), 0.3f),
+            ["Banana_Tip"] = new(C(0.35f, 0.25f, 0.1f), 0.3f),
+            ["Rocket_Body"] = new(C(0.85f, 0.12f, 0.12f), 0.7f, 0.3f),
+            ["Rocket_Fin"] = new(C(0.15f, 0.35f, 0.8f), 0.6f),
+            ["Rocket_Flame"] = new(C(1f, 0.55f, 0.1f), 0.2f, emission: 4f),
+            // Effets (couleur réglée à l'exécution)
+            ["Fx_Wave"] = new(Color.white, 0f, transparent: true, unlit: true),
+            ["Fx_Shield"] = new(Color.white, 0.9f, transparent: true),
+            ["Fx_Bolt"] = new(C(1f, 0.95f, 0.6f), 0f, unlit: true),
         };
 
         private static float _yawFix = float.NaN;

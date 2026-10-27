@@ -33,6 +33,7 @@ Tout est automatique : à la première ouverture, Unity installe les outils néc
   - **Espace** maintenu dans un virage : drifter (relâche pour le boost)
   - **E** ou **Maj** : lancer le bonus
   - **H** : klaxon
+  - **F** : pouvoir du pilote (quand la jauge est pleine)
   - **S** : freiner
 - À l'arrivée : tableau des résultats, **REJWE** (rejouer) ou **MENI**.
 - Appuie encore sur **▶** pour arrêter.
@@ -40,6 +41,18 @@ Tout est automatique : à la première ouverture, Unity installe les outils néc
 Tu peux aussi lancer directement **Labadie** ou **Prototype** : tu joues alors le dernier pilote choisi (Ti Djo par défaut).
 
 Pour tout reconstruire à neuf : menu **Rally Ayiti → Tout construire (menu + circuits)**.
+
+## Esprit Beach Buggy, version haïtienne
+
+- **Pouvoir de chaque pilote** (bouton POUVWA, touche **F**, jauge qui se remplit pendant la course, plus vite quand tu es derrière) :
+  Ti Djo — *Klaksòn jeyan* (repousse les karts proches) · Manmzèl Loudena — *Lapli mango* · Bòs Wilfrid — *Repare* (répare + boost) ·
+  Nadège — *Bouclye* électrique 4 s · Judens Konpa — *Onn konpa* (étourdit autour de lui) · Sè Naïelie — *Swen* (soigne + protège).
+- **11 bonus** dans les caisses de marché, tirés selon ta place : Kokoye, Twa kokoye, Fize (fusée à tête chercheuse), Mango tonbe,
+  Po bannann, Lanbi (onde de conque), Kafe (boost), Parasòl (bloque un coup), Loraj (orage sur tous ceux devant), Pikliz (brouille la vue),
+  Tap-tap fou (pilote automatique en super vitesse).
+- **Gourdes** : pièces à ramasser sur la piste + prime selon la place (300 / 200 / 150 / 80). Le total s'affiche au menu.
+- **Garage** : au menu, bouton **+** à côté de chaque barre pour améliorer Vitès, Akselerasyon et Kontwòl du véhicule (400, 900, 1 600, 2 500 G).
+- **En course** : classement des pilotes à gauche, caméra basse et proche, le kart touché saute et tourne sur lui-même, bulles de protection, éclairs.
 
 ## Menu de départ
 

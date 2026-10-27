@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v4";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v5";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -198,7 +198,11 @@ namespace RallyAyiti.EditorTools
 
             KokoyeProjectile kokoye = KokoyePrefab(kartLayer);
             MangoTrap mango = MangoPrefab();
-            KartController[] karts = CreateGrid(line, kartLayer, kokoye, mango);
+            MangoTrap banana = BananaPrefab();
+            HomingRocket rocket = RocketPrefab();
+            KartController[] karts = CreateGrid(line, kartLayer, kokoye, mango, banana, rocket);
+            CreateRaceFx();
+            CreateCoins(line, th);
             KartController player = karts[PlayerPilot];
 
             if (th.Arch) CreateArch(line);
@@ -218,6 +222,7 @@ namespace RallyAyiti.EditorTools
             SetRef(setup, "cameraFx", camFx);
             SetInt(setup, "defaultPilot", PlayerPilot);
             SetInt(setup, "playerGridSlot", PlayerPilot);
+            SetStringArray(setup, "vehicles", Pilots.Select(p => p.Model).ToArray());
 
             EditorSceneManager.SaveScene(scene, th.ScenePath);
             UpdateBuildScenes();
@@ -941,7 +946,8 @@ namespace RallyAyiti.EditorTools
         };
 
         /// <summary>Les six karts, dans l'ordre du catalogue. Ti Djo part en fond de grille ; RaceSetup échange selon le choix du menu.</summary>
-        private static KartController[] CreateGrid(SplineContainer line, int kartLayer, KokoyeProjectile kokoye, MangoTrap mango)
+        private static KartController[] CreateGrid(SplineContainer line, int kartLayer, KokoyeProjectile kokoye, MangoTrap mango,
+            MangoTrap banana, HomingRocket rocket)
         {
             float[] lanes = { 0f, -0.5f, 0.5f, -0.3f, 0.3f, 0.15f };
             float[] skills = { 0.99f, 0.96f, 0.94f, 0.97f, 0.93f, 0.95f };
@@ -962,6 +968,14 @@ namespace RallyAyiti.EditorTools
                 var powerUps = kart.gameObject.AddComponent<PowerUpSystem>();
                 SetRef(powerUps, "kokoyePrefab", kokoye);
                 SetRef(powerUps, "mangoPrefab", mango);
+                SetRef(powerUps, "bananaPrefab", banana);
+                SetRef(powerUps, "rocketPrefab", rocket);
+
+                var power = kart.gameObject.AddComponent<PilotPower>();
+                SetInt(power, "power", (int)PilotPowers[i].type);
+                SetString(power, "powerName", PilotPowers[i].name);
+                SetRef(power, "mangoPrefab", mango);
+                SetRef(power, "hornClip", Clip("Horn"));
                 karts[i] = kart;
                 Occupied.Add((pos, 2f));
             }
@@ -1129,12 +1143,13 @@ namespace RallyAyiti.EditorTools
             vc.Follow = target;
             vc.LookAt = target;
             LensSettings lens = vc.Lens;
-            lens.FieldOfView = 60f;
+            lens.FieldOfView = 62f;
             lens.FarClipPlane = 700f;
             vc.Lens = lens;
 
             var follow = vcGo.AddComponent<CinemachineFollow>();
-            follow.FollowOffset = new Vector3(0f, 3.0f, -7.5f);
+            // Caméra basse et proche, le kart bien visible : l'esprit des karts arcade mobiles.
+            follow.FollowOffset = new Vector3(0f, 2.4f, -6.2f);
             TrackerSettings tracker = follow.TrackerSettings;
             tracker.BindingMode = BindingMode.LockToTargetWithWorldUp;
             tracker.PositionDamping = new Vector3(0.2f, 0.3f, 0.35f);
@@ -1142,7 +1157,7 @@ namespace RallyAyiti.EditorTools
             follow.TrackerSettings = tracker;
 
             var composer = vcGo.AddComponent<CinemachineRotationComposer>();
-            composer.TargetOffset = new Vector3(0f, 1.2f, 2f);
+            composer.TargetOffset = new Vector3(0f, 1.0f, 2.6f);
 
             var fx = vcGo.AddComponent<KartCameraFx>();
             SetRef(fx, "cam", vc);
@@ -1187,6 +1202,7 @@ namespace RallyAyiti.EditorTools
             TouchButton(canvas, "Fren", "FREN", "<Gamepad>/leftTrigger", font, new Vector2(1f, 0f), new Vector2(-60f, 330f), 150f);
             TouchButton(canvas, "Klakson", "KLAKSON", "<Gamepad>/buttonNorth", font, new Vector2(1f, 0f), new Vector2(-330f, 330f), 130f);
 
+            CreateArcadeHud(canvas, hud, font, display);
             CreateResultsPanel(canvas, hud, font, display);
         }
 
@@ -1238,8 +1254,12 @@ namespace RallyAyiti.EditorTools
             SetRef(item, "race", race);
             SetRef(item, "slot", slot);
             SetRef(item, "icon", icon);
-            SetRef(item, "kokoye", ArtLibrary.LoadSprite("Icon_Kokoye.png"));
-            SetRef(item, "mango", ArtLibrary.LoadSprite("Icon_Mango.png"));
+            string[] iconFiles = { null, "Icon_Kokoye", "Icon_Mango", "Icon_TwaKokoye", "Icon_Fize", "Icon_PoBannann", "Icon_Lanbi",
+                "Icon_Kafe", "Icon_Parasol", "Icon_Loraj", "Icon_Pikliz", "Icon_TaptapFou" };
+            SetRefArray(item, "icons", iconFiles.Select(f => (Object)(f == null ? null : ArtLibrary.LoadSprite(f + ".png"))).ToArray());
+            Text name = Label(slot, "NonBonis", DisplayFont(), 24, TextAnchor.UpperCenter, new Vector2(0.5f, 0f), new Vector2(0f, -40f),
+                new Vector2(300f, 34f), Paper);
+            SetRef(item, "label", name);
         }
 
         private static Text Label(Transform parent, string name, Font font, int size, TextAnchor align,

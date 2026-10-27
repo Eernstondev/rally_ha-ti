@@ -42,11 +42,30 @@ namespace RallyAyiti.Race
         private Comparison<LapTracker> _byProgress;
         private int _finishedCount;
 
+        /// <summary>Pièces ramassées par le joueur pendant cette course.</summary>
+        public int PlayerCoins { get; private set; }
+        /// <summary>Gourdes gagnées à l'arrivée (place + pièces), déjà ajoutées à la cagnotte.</summary>
+        public int Reward { get; private set; }
+        public event Action<int> CoinsChanged;
+
+        private static readonly int[] PlaceRewards = { 300, 200, 150, 80, 80, 80 };
+        public const int CoinValue = 5;
+
+        public void AddCoin()
+        {
+            PlayerCoins++;
+            CoinsChanged?.Invoke(PlayerCoins);
+        }
+
         public Checkpoint GetCheckpoint(int index) => _checkpoints[index];
         public int PositionOf(LapTracker racer) => _standings.IndexOf(racer) + 1;
 
+        /// <summary>Course en cours (une seule par scène).</summary>
+        public static RaceManager Current { get; private set; }
+
         private void Awake()
         {
+            Current = this;
             var list = new List<Checkpoint>(checkpointsRoot.childCount);
             for (int i = 0; i < checkpointsRoot.childCount; i++)
             {
@@ -118,6 +137,12 @@ namespace RallyAyiti.Race
             if (Phase == RacePhase.Finished) return;
             _standings.Sort(_byProgress);
             Phase = RacePhase.Finished;
+            if (Player != null)
+            {
+                int place = PositionOf(Player);
+                Reward = PlaceRewards[Mathf.Clamp(place - 1, 0, PlaceRewards.Length - 1)] + PlayerCoins * CoinValue;
+                Core.GameSettings.Gourdes += Reward;
+            }
             RaceEnded?.Invoke();
         }
     }

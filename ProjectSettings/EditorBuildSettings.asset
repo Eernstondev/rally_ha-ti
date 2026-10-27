@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Project/Scenes/Meni.unity
+    guid: a35c09a0156ac4be3a13db07c697739a
+  - enabled: 1
     path: Assets/_Project/Scenes/Labadie.unity
     guid: 7ca9d57ca6485472ca0aed108200b467
   - enabled: 1

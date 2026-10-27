@@ -14,6 +14,8 @@ namespace RallyAyiti.Core
     {
         [Tooltip("Karts dans l'ordre du catalogue de pilotes du menu.")]
         [SerializeField] private KartController[] karts;
+        [Tooltip("Modèle de véhicule de chaque kart (clé des améliorations du garage).")]
+        [SerializeField] private string[] vehicles;
         [SerializeField] private CinemachineCamera chaseCamera;
         [SerializeField] private KartCameraFx cameraFx;
         [Tooltip("Pilote utilisé quand on lance la scène sans passer par le menu.")]
@@ -45,6 +47,11 @@ namespace RallyAyiti.Core
             }
 
             Player = karts[chosen];
+            if (vehicles != null && chosen < vehicles.Length)
+            {
+                string v = vehicles[chosen];
+                Player.SetUpgrades(GameSettings.Upgrade(v, 0), GameSettings.Upgrade(v, 1), GameSettings.Upgrade(v, 2));
+            }
             Transform target = Player.transform;
             if (chaseCamera != null)
             {
