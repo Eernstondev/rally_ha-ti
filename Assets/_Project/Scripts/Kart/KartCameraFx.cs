@@ -17,8 +17,15 @@ namespace RallyAyiti.Kart
         [SerializeField] private float boostFov = 10f;
         [SerializeField] private float smoothing = 6f;
         [Header("Inclinaison (roulis) dans les virages")]
-        [SerializeField] private float dutchSteer = 4f;
-        [SerializeField] private float dutchDrift = 3.5f;
+        [SerializeField] private float dutchSteer = 9f;
+        [SerializeField] private float dutchDrift = 6f;
+        [Header("Arrivée : la caméra tourne autour du kart")]
+        [SerializeField] private float orbitSpeed = 28f;
+        [SerializeField] private float orbitDistance = 6.5f;
+        [SerializeField] private float orbitHeight = 2.2f;
+
+        private bool _orbiting;
+        private float _orbitAngle;
         [SerializeField] private float dutchSmoothing = 4f;
         [Header("Tremblements")]
         [SerializeField] private float roadShake = 0.35f;
@@ -55,6 +62,28 @@ namespace RallyAyiti.Kart
             kart.Hit -= OnHit;
         }
 
+        /// <summary>Une fois la ligne franchie, la caméra quitte la poursuite et tourne lentement autour du kart.</summary>
+        private bool UpdateOrbit(float dt)
+        {
+            if (!_orbiting)
+            {
+                var tracker = kart.GetComponent<RallyAyiti.Race.LapTracker>();
+                if (tracker == null || !tracker.Finished) return false;
+                _orbiting = true;
+                _orbitAngle = 180f;
+                foreach (CinemachineComponentBase c in cam.GetComponents<CinemachineComponentBase>()) c.enabled = false;
+                if (noise != null) noise.AmplitudeGain = 0f;
+                LensSettings flat = cam.Lens;
+                flat.Dutch = 0f;
+                cam.Lens = flat;
+            }
+            _orbitAngle += orbitSpeed * dt;
+            Vector3 target = kart.transform.position + Vector3.up * 0.8f;
+            Vector3 offset = Quaternion.Euler(0f, kart.transform.eulerAngles.y + _orbitAngle, 0f) * new Vector3(0f, orbitHeight, -orbitDistance);
+            cam.transform.SetPositionAndRotation(target + offset, Quaternion.LookRotation(target - (target + offset)));
+            return true;
+        }
+
         private void OnLanded() => _shake = Mathf.Max(_shake, landShake);
         private void OnHit() => _shake = Mathf.Max(_shake, hitShake);
 
@@ -62,6 +91,7 @@ namespace RallyAyiti.Kart
         {
             if (cam == null || kart == null) return;
             float dt = Time.deltaTime;
+            if (UpdateOrbit(dt)) return;
             float target = baseFov + speedFov * kart.Speed01 + (kart.IsBoosting ? boostFov : 0f);
             LensSettings lens = cam.Lens;
             lens.FieldOfView = Mathf.Lerp(lens.FieldOfView, target, 1f - Mathf.Exp(-smoothing * dt));

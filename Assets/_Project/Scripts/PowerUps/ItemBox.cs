@@ -47,6 +47,7 @@ namespace RallyAyiti.PowerUps
         {
             if (!KartBodyLink.TryGetKart(other, out KartController kart)) return;
             if (kart.TryGetComponent(out PowerUpSystem powerUps)) powerUps.Grant();
+            RaceFx.Sparkle(transform.position + Vector3.up * 1f, new Color(1f, 0.92f, 0.5f), 18);
             _trigger.enabled = false;
             if (visual != null) visual.gameObject.SetActive(false);
             _hiddenUntil = Time.time + respawnDelay;

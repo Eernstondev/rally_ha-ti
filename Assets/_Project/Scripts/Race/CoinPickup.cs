@@ -41,6 +41,7 @@ namespace RallyAyiti.Race
             if (kart.TryGetComponent(out LapTracker tracker) && tracker.IsPlayer && RaceManager.Current != null)
             {
                 RaceManager.Current.AddCoin();
+                RallyAyiti.PowerUps.RaceFx.Sparkle(transform.position + Vector3.up * 1f, new Color(1f, 0.85f, 0.3f), 8);
                 GameAudio.Play(Sfx.Coin, 0.7f, 1f + Random.Range(-0.05f, 0.08f));
             }
             _trigger.enabled = false;

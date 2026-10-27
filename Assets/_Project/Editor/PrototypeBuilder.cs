@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v7";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v8";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -228,6 +228,7 @@ namespace RallyAyiti.EditorTools
             (CinemachineCamera chase, KartCameraFx camFx) = CreateCamera(player);
             CreatePostFx();
             CreateHud(race, line);
+            CreateIntro(race);
             CreateRaceAudio(th, race);
 
             var setup = new GameObject("RaceSetup").AddComponent<RaceSetup>();
@@ -620,7 +621,7 @@ namespace RallyAyiti.EditorTools
             box.size = new Vector3(4f, 2f, 6f);
             box.center = new Vector3(0f, 1f, 0f);
             go.AddComponent<BoostPad>();
-            Prim(PrimitiveType.Quad, "Visuel", go.transform, Vector3.zero, new Vector3(4f, 6f, 1f), m.Boost, Quaternion.Euler(90f, 0f, 0f));
+            Prim(PrimitiveType.Quad, "Visuel", go.transform, Vector3.zero, new Vector3(4f, 6f, 1f), ArtLibrary.Get("Boost_Pad"), Quaternion.Euler(90f, 0f, 0f));
         }
 
         private static void CreateItemBoxes(SplineContainer line, float[] rows)
@@ -1085,7 +1086,7 @@ namespace RallyAyiti.EditorTools
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root.transform, false);
             // Karts un peu plus gros que nature : plus lisibles avec la caméra basse (esprit Beach Buggy).
-            visual.localScale = Vector3.one * 1.15f;
+            visual.localScale = Vector3.one * 1.25f;
             Transform vehicle = SpawnPilotModel(pilot, visual);
 
             float back = -pilot.Length * 0.42f;
@@ -1209,7 +1210,8 @@ namespace RallyAyiti.EditorTools
             cam.allowHDR = true;
             cam.allowMSAA = true;
             camGo.AddComponent<AudioListener>();
-            camGo.AddComponent<CinemachineBrain>();
+            var brain = camGo.AddComponent<CinemachineBrain>();
+            brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.EaseInOut, 0.9f);
             UniversalAdditionalCameraData urp = cam.GetUniversalAdditionalCameraData();
             urp.renderPostProcessing = true;
             urp.antialiasing = AntialiasingMode.None;
@@ -1221,13 +1223,13 @@ namespace RallyAyiti.EditorTools
             vc.Follow = target;
             vc.LookAt = target;
             LensSettings lens = vc.Lens;
-            lens.FieldOfView = 60f;
+            lens.FieldOfView = 58f;
             lens.FarClipPlane = 700f;
             vc.Lens = lens;
 
             var follow = vcGo.AddComponent<CinemachineFollow>();
             // Caméra basse et proche, juste derrière le kart, le regard loin devant (façon Beach Buggy).
-            follow.FollowOffset = new Vector3(0f, 1.75f, -4.8f);
+            follow.FollowOffset = new Vector3(0f, 1.45f, -3.7f);
             TrackerSettings tracker = follow.TrackerSettings;
             tracker.BindingMode = BindingMode.LockToTargetWithWorldUp;
             tracker.PositionDamping = new Vector3(0.2f, 0.3f, 0.35f);
@@ -1235,7 +1237,7 @@ namespace RallyAyiti.EditorTools
             follow.TrackerSettings = tracker;
 
             var composer = vcGo.AddComponent<CinemachineRotationComposer>();
-            composer.TargetOffset = new Vector3(0f, 1.05f, 4.5f);
+            composer.TargetOffset = new Vector3(0f, 0.95f, 5f);
 
             var shake = vcGo.AddComponent<CinemachineBasicMultiChannelPerlin>();
             shake.NoiseProfile = ShakeProfile();
@@ -1245,7 +1247,7 @@ namespace RallyAyiti.EditorTools
             SetRef(fx, "cam", vc);
             SetRef(fx, "kart", player);
             SetRef(fx, "noise", shake);
-            SetFloat(fx, "baseFov", 60f);
+            SetFloat(fx, "baseFov", 58f);
             return (vc, fx);
         }
 
@@ -1263,11 +1265,19 @@ namespace RallyAyiti.EditorTools
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Font display = DisplayFont();
-            Text position = Label(canvas, "Plas", display, 80, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(400f, 120f), Sun);
-            Text lap = Label(canvas, "Tou", display, 36, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(44f, -128f), new Vector2(400f, 60f), Paper);
-            Text time = Label(canvas, "Kwonomet", display, 44, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -30f), new Vector2(400f, 60f), Paper);
-            Text speed = Label(canvas, "Vites", display, 40, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -95f), new Vector2(400f, 60f), Paper);
-            Text center = Label(canvas, "MesajSantral", display, 140, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), new Vector2(1600f, 240f), Sun);
+            // Disposition façon Beach Buggy : PLAS en haut à gauche, TOU en haut à droite, barre de progression au centre.
+            Label(canvas, "PlasTit", display, 30, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -40f), new Vector2(160f, 40f), Paper).text = "PLAS";
+            Text position = Label(canvas, "Plas", display, 84, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(150f, -14f), new Vector2(300f, 110f), Sun);
+            Text lap = Label(canvas, "Tou", display, 48, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-130f, -28f), new Vector2(360f, 70f), Paper);
+            Text time = Label(canvas, "Kwonomet", display, 30, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-130f, -92f), new Vector2(360f, 44f), Paper);
+            Text speed = Label(canvas, "Vites", display, 30, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-130f, -92f), new Vector2(360f, 44f), Paper);
+            speed.gameObject.SetActive(false);
+            // Juste au-dessus du kart, très gros, contour épais (3, 2, 1, ALE !!).
+            Text center = Label(canvas, "MesajSantral", display, 210, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1700f, 300f), Sun);
+            center.GetComponent<Outline>().effectDistance = new Vector2(6f, -6f);
+            var centerShadow = center.gameObject.AddComponent<Shadow>();
+            centerShadow.effectColor = new Color(0.45f, 0.18f, 0f, 0.9f);
+            centerShadow.effectDistance = new Vector2(0f, -10f);
 
             var hud = canvasGo.AddComponent<RaceHUD>();
             SetRef(hud, "race", race);
@@ -1279,12 +1289,12 @@ namespace RallyAyiti.EditorTools
 
             CreateItemSlot(canvas, race);
 
-            TouchButton(canvas, "Goch", "<", "<Gamepad>/dpad/left", font, new Vector2(0f, 0f), new Vector2(60f, 60f), 220f);
-            TouchButton(canvas, "Dwat", ">", "<Gamepad>/dpad/right", font, new Vector2(0f, 0f), new Vector2(310f, 60f), 220f);
-            TouchButton(canvas, "Drift", "DRIFT", "<Gamepad>/buttonSouth", font, new Vector2(1f, 0f), new Vector2(-60f, 60f), 240f);
-            TouchButton(canvas, "Bonis", "BONIS", "<Gamepad>/buttonEast", font, new Vector2(1f, 0f), new Vector2(-330f, 60f), 180f);
-            TouchButton(canvas, "Fren", "FREN", "<Gamepad>/leftTrigger", font, new Vector2(1f, 0f), new Vector2(-60f, 330f), 150f);
-            TouchButton(canvas, "Klakson", "KLAKSON", "<Gamepad>/buttonNorth", font, new Vector2(1f, 0f), new Vector2(-330f, 330f), 130f);
+            // Deux pédales de direction dans les coins ; l'accélération est automatique, le dérapage part en braquant à fond.
+            // Comme Beach Buggy : toute la moitié gauche (ou droite) de l'écran tourne ; les pédales ne sont qu'un repère.
+            SteerZone(canvas, "ZonGoch", "<Gamepad>/dpad/left", new Vector2(0f, 0f), new Vector2(0.5f, 1f));
+            SteerZone(canvas, "ZonDwat", "<Gamepad>/dpad/right", new Vector2(0.5f, 0f), new Vector2(1f, 1f));
+            TouchButton(canvas, "Goch", "<", null, font, new Vector2(0f, 0f), new Vector2(36f, 36f), 210f);
+            TouchButton(canvas, "Dwat", ">", null, font, new Vector2(1f, 0f), new Vector2(-36f, 36f), 210f);
 
             CreateArcadeHud(canvas, hud, font, display);
             CreateResultsPanel(canvas, hud, font, display);
@@ -1315,9 +1325,11 @@ namespace RallyAyiti.EditorTools
             var slotGo = new GameObject("KaseBonis", typeof(RectTransform));
             slotGo.transform.SetParent(canvas, false);
             var slot = (RectTransform)slotGo.transform;
-            slot.anchorMin = slot.anchorMax = slot.pivot = new Vector2(0.5f, 1f);
-            slot.anchoredPosition = new Vector2(0f, -24f);
-            slot.sizeDelta = new Vector2(150f, 150f);
+            slot.anchorMin = slot.anchorMax = slot.pivot = new Vector2(1f, 1f);
+            slot.anchoredPosition = new Vector2(-40f, -170f);
+            slot.sizeDelta = new Vector2(170f, 170f);
+            var tap = slotGo.AddComponent<OnScreenButton>();
+            SetString(tap, "m_ControlPath", "<Gamepad>/buttonEast");
             var bg = slotGo.AddComponent<Image>();
             bg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             bg.type = Image.Type.Sliced;
@@ -1331,7 +1343,7 @@ namespace RallyAyiti.EditorTools
             iconGo.transform.SetParent(slot, false);
             var iconRt = (RectTransform)iconGo.transform;
             iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.sizeDelta = new Vector2(118f, 118f);
+            iconRt.sizeDelta = new Vector2(124f, 124f);
             var icon = iconGo.AddComponent<Image>();
             icon.preserveAspect = true;
             icon.raycastTarget = false;
@@ -1377,6 +1389,22 @@ namespace RallyAyiti.EditorTools
             return text;
         }
 
+        /// <summary>Zone tactile invisible couvrant une portion de l'écran (derrière le reste de l'interface).</summary>
+        private static void SteerZone(Transform canvas, string name, string controlPath, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            go.transform.SetAsFirstSibling();
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0f, 0f, 0f, 0f); // invisible mais capte le doigt
+            var button = go.AddComponent<OnScreenButton>();
+            SetString(button, "m_ControlPath", controlPath);
+        }
+
         private static void TouchButton(Transform parent, string name, string caption, string controlPath, Font font,
             Vector2 anchor, Vector2 anchoredPos, float size)
         {
@@ -1392,12 +1420,19 @@ namespace RallyAyiti.EditorTools
             var image = go.AddComponent<Image>();
             image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             image.type = Image.Type.Sliced;
-            image.color = new Color(Night.r, Night.g, Night.b, 0.5f);
-            MakeRound(image, new Color(1f, 1f, 1f, 0.45f));
+            image.color = new Color(Night.r, Night.g, Night.b, controlPath != null ? 0.5f : 0.3f);
+            MakeRound(image, new Color(1f, 1f, 1f, controlPath != null ? 0.45f : 0.3f));
 
-            // Champ sérialisé : évite de créer une manette virtuelle pendant la construction dans l'éditeur.
-            var button = go.AddComponent<OnScreenButton>();
-            SetString(button, "m_ControlPath", controlPath);
+            if (controlPath != null)
+            {
+                // Champ sérialisé : évite de créer une manette virtuelle pendant la construction dans l'éditeur.
+                var button = go.AddComponent<OnScreenButton>();
+                SetString(button, "m_ControlPath", controlPath);
+            }
+            else
+            {
+                foreach (Graphic g in go.GetComponentsInChildren<Graphic>()) g.raycastTarget = false;
+            }
 
             int fontSize = caption.Length > 1 ? Mathf.Min(40, Mathf.RoundToInt(size * 1.5f / caption.Length)) : 90;
             Text label = Label(go.transform, "Teks", font, fontSize, TextAnchor.MiddleCenter,

@@ -77,6 +77,7 @@ namespace RallyAyiti.Kart
             if (boosting != _flameOn && boostFlame != null)
             {
                 _flameOn = boosting;
+                if (boosting) RallyAyiti.PowerUps.RaceFx.Sparkle(transform.position + Vector3.up * 1f - transform.forward * 0.8f, new Color(1f, 0.8f, 0.35f), 16);
                 if (boosting) boostFlame.Play();
                 else boostFlame.Stop();
             }

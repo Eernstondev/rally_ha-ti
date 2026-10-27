@@ -68,6 +68,7 @@ namespace RallyAyiti.EditorTools
             SetRef(fx, "waveMaterial", ArtLibrary.Get("Fx_Wave"));
             SetRef(fx, "shieldMaterial", ArtLibrary.Get("Fx_Shield"));
             SetRef(fx, "boltMaterial", ArtLibrary.Get("Fx_Bolt"));
+            SetRef(fx, "sparkles", SparkleSystem(fx.transform));
         }
 
         /// <summary>Lignes de pièces de gourde en zigzag le long du tracé, entre les caisses de bonus.</summary>
@@ -122,16 +123,10 @@ namespace RallyAyiti.EditorTools
             splat.blocksRaycasts = false;
             splat.interactable = false;
 
-            RectTransform board = Panel(canvas, "Klasman", new Vector2(0f, 1f), new Vector2(30f, -215f), new Vector2(330f, 250f),
-                new Color(Night.r, Night.g, Night.b, 0.5f), null);
-            Text standings = Label(board, "Lis", font, 27, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(18f, -12f), new Vector2(300f, 230f), Paper);
-            standings.lineSpacing = 1.05f;
-            standings.supportRichText = true;
+            Text coins = Label(canvas, "Goud", display, 34, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-230f, -180f), new Vector2(300f, 50f), Sun);
 
-            Text coins = Label(canvas, "Goud", display, 40, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -162f), new Vector2(300f, 56f), Sun);
-
-            // Bouton de pouvoir : carré doré qui se remplit, simule la gâchette gauche de la manette.
-            RectTransform button = Panel(canvas, "Pouvwa", new Vector2(1f, 0f), new Vector2(-490f, 330f), new Vector2(170f, 170f),
+            // Bouton de pouvoir du pilote : rond à gauche sous la place, il se remplit puis s'illumine (gâchette gauche).
+            RectTransform button = Panel(canvas, "Pouvwa", new Vector2(0f, 1f), new Vector2(40f, -170f), new Vector2(170f, 170f),
                 new Color(Night.r, Night.g, Night.b, 0.9f), Sun);
             Image halo = RoundLayer(button, "Lalimye", "UI_Halo.png", Sun, -40f);
             halo.transform.SetAsFirstSibling();
@@ -157,7 +152,6 @@ namespace RallyAyiti.EditorTools
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.text = "POUVWA";
 
-            SetRef(hud, "standingsText", standings);
             SetRef(hud, "coinsText", coins);
             SetRef(hud, "powerFill", fill);
             SetRef(hud, "powerLabel", label);
@@ -172,7 +166,7 @@ namespace RallyAyiti.EditorTools
             Sprite round = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
 
             // Barre de progression.
-            RectTransform bar = Panel(canvas, "Pwogresyon", new Vector2(0.5f, 1f), new Vector2(0f, -262f), new Vector2(760f, 16f),
+            RectTransform bar = Panel(canvas, "Pwogresyon", new Vector2(0.5f, 1f), new Vector2(0f, -52f), new Vector2(820f, 14f),
                 new Color(Night.r, Night.g, Night.b, 0.75f), null);
             var fillGo = new GameObject("Ranpli", typeof(RectTransform));
             fillGo.transform.SetParent(bar, false);
@@ -205,11 +199,12 @@ namespace RallyAyiti.EditorTools
                 var rt = (RectTransform)go.transform;
                 rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
                 rt.anchoredPosition = pos;
-                rt.sizeDelta = new Vector2(230f, 230f);
+                rt.sizeDelta = new Vector2(250f, 196f);
                 if (caption == "<<") rt.localScale = new Vector3(-1f, 1f, 1f);
                 var img = go.AddComponent<Image>();
-                img.sprite = ArtLibrary.LoadSprite("UI_Chevron.png");
-                img.color = Sun;
+                // Grande flèche blanche détourée, semi-transparente (repère de virage façon Beach Buggy).
+                img.sprite = ArtLibrary.LoadSprite("UI_Arrow.png") ?? ArtLibrary.LoadSprite("UI_Chevron.png");
+                img.color = new Color(1f, 1f, 1f, 0.9f);
                 img.raycastTarget = false;
                 var shadow = go.AddComponent<Shadow>();
                 shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
@@ -227,7 +222,7 @@ namespace RallyAyiti.EditorTools
             SetRef(turns, "right", Arrow("FlechDwat", ">>", new Vector2(1f, 0.5f), new Vector2(-60f, -40f)));
 
             // Pause : petit bouton rond à droite de la case bonus, panneau centré.
-            Button pauseButton = UiButton(canvas, "Poz", "II", display, new Vector2(0.5f, 1f), new Vector2(150f, -40f), new Vector2(84f, 84f),
+            Button pauseButton = UiButton(canvas, "Poz", "II", display, new Vector2(1f, 1f), new Vector2(-28f, -28f), new Vector2(84f, 84f),
                 new Color(Night.r, Night.g, Night.b, 0.85f), Paper);
             MakeRound(pauseButton.GetComponent<Image>(), new Color(1f, 1f, 1f, 0.6f));
             RectTransform panel = Panel(canvas, "MeniPoz", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 560f),
@@ -243,6 +238,93 @@ namespace RallyAyiti.EditorTools
             SetRef(pause, "resumeButton", resume);
             SetRef(pause, "retryButton", retry);
             SetRef(pause, "menuButton", menu);
+        }
+
+        /// <summary>Particules étoilées additives émises à la demande par RaceFx.Sparkle (aucune émission continue).</summary>
+        private static ParticleSystem SparkleSystem(Transform parent)
+        {
+            var go = new GameObject("Zetwal");
+            go.transform.SetParent(parent, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ParticleSystem.MainModule main = ps.main;
+            main.playOnAwake = true;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2f, 6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.35f, 0.8f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI);
+            main.gravityModifier = 0.35f;
+            main.maxParticles = 400;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.rateOverTime = 0f;
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.7f;
+            ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+            ParticleSystem.RotationOverLifetimeModule spin = ps.rotationOverLifetime;
+            spin.enabled = true;
+            spin.z = new ParticleSystem.MinMaxCurve(-4f, 4f);
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = StarParticleMaterial();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return ps;
+        }
+
+        private static Material StarParticleMaterial()
+        {
+            string path = $"{Root}/Materials/Zetwal.mat";
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.shader = shader;
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtLibrary.ArtRoot}/Textures/Fx_Star.png");
+            if (tex != null) mat.mainTexture = tex;
+            if (mat.HasProperty("_Surface"))
+            {
+                // Additif : les étoiles brillent par-dessus le décor.
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 2f);
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                mat.SetFloat("_ZWrite", 0f);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.SetOverrideTag("RenderType", "Transparent");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        /// <summary>Caméra de survol (inactive) et composant RaceIntro, branché sur le RaceManager et le HUD.</summary>
+        private static void CreateIntro(RaceManager race)
+        {
+            var go = new GameObject("KameraSiryol");
+            var cam = go.AddComponent<Unity.Cinemachine.CinemachineCamera>();
+            Unity.Cinemachine.LensSettings lens = cam.Lens;
+            lens.FieldOfView = 55f;
+            lens.FarClipPlane = 700f;
+            cam.Lens = lens;
+            go.SetActive(false);
+
+            var intro = new GameObject("Entwodiksyon").AddComponent<RaceIntro>();
+            SetRef(intro, "introCam", cam);
+            GameObject hud = GameObject.Find("HUD");
+            if (hud != null)
+            {
+                CanvasGroup group = hud.GetComponent<CanvasGroup>();
+                if (group == null) group = hud.AddComponent<CanvasGroup>();
+                SetRef(intro, "hud", group);
+            }
+            SetRef(race, "intro", intro);
         }
 
         /// <summary>Remplace un fond rectangulaire par un disque glacé, avec un anneau lumineux optionnel.</summary>
