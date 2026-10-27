@@ -453,7 +453,7 @@ namespace RallyAyiti.EditorTools
         private static void CreateRoad(Theme th, Frame[] f, Mats m)
         {
             Material surface = ArtLibrary.Get(th.SandTrack ? "Track_Sand" : "Track_Asphalt");
-            CreateFlatStrip("Wout", f, -HalfWidth, HalfWidth, 0.02f, 5f, surface, true);
+            CreateFlatStrip("Wout", f, -HalfWidth, HalfWidth, 0.02f, th.SandTrack ? 7f : 5f, surface, true, th.SandTrack);
             if (th.SandTrack) return; // Piste de plage : pas de bordures peintes, le sable rejoint la plage.
             CreateFlatStrip("BodiGoch", f, -HalfWidth, -HalfWidth + 0.8f, 0.035f, 2f, m.Kerb, false);
             CreateFlatStrip("BodiDwat", f, HalfWidth - 0.8f, HalfWidth, 0.035f, 2f, m.Kerb, false);
@@ -461,9 +461,12 @@ namespace RallyAyiti.EditorTools
             CreateFlatStrip("LigneDroite", f, HalfWidth - 1.2f, HalfWidth - 1.0f, 0.03f, 5f, m.Line, false);
         }
 
-        /// <summary>Bande à plat le long du circuit. uvMeters = taille d'une répétition de texture.</summary>
+        /// <summary>
+        /// Bande à plat le long du circuit. uvMeters = taille d'une répétition de texture.
+        /// fullWidth : la texture couvre toute la largeur de la bande (U de 0 à 1), utile pour les ornières de la piste.
+        /// </summary>
         private static void CreateFlatStrip(string name, Frame[] f, float from, float to, float y, float uvMeters,
-            Material mat, bool collider)
+            Material mat, bool collider, bool fullWidth = false)
         {
             int n = f.Length;
             var verts = new Vector3[n * 2];
@@ -475,8 +478,8 @@ namespace RallyAyiti.EditorTools
                 if (i > 0) dist += Vector3.Distance(f[i].Pos, f[i - 1].Pos);
                 verts[i * 2] = f[i].Pos + f[i].Right * from + Vector3.up * y;
                 verts[i * 2 + 1] = f[i].Pos + f[i].Right * to + Vector3.up * y;
-                uvs[i * 2] = new Vector2(from / uvMeters, dist / uvMeters);
-                uvs[i * 2 + 1] = new Vector2(to / uvMeters, dist / uvMeters);
+                uvs[i * 2] = new Vector2(fullWidth ? 0f : from / uvMeters, dist / uvMeters);
+                uvs[i * 2 + 1] = new Vector2(fullWidth ? 1f : to / uvMeters, dist / uvMeters);
 
                 int j = (i + 1) % n, t = i * 6;
                 tris[t] = i * 2; tris[t + 1] = j * 2; tris[t + 2] = i * 2 + 1;

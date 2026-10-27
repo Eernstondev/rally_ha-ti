@@ -87,6 +87,8 @@ namespace RallyAyiti.EditorTools
             SerializedProperty samples = sso.FindProperty("m_Settings.Samples");
             if (samples != null) samples.intValue = 2;
             sso.ApplyModifiedPropertiesWithoutUndo();
+            // Désactivée par défaut : sur téléphone elle coûte plus qu'elle n'apporte. À cocher dans le renderer pour les PC.
+            ssao.SetActive(false);
             EditorUtility.SetDirty(renderer);
             AssetDatabase.SaveAssets();
         }
