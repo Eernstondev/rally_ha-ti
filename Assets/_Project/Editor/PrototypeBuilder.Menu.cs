@@ -61,6 +61,8 @@ namespace RallyAyiti.EditorTools
             EnsureFolder(Root + "/Materials");
             EnsureFolder(Root + "/Data");
             Occupied.Clear();
+            _th = null;
+            _hf = null;
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             UnityEngine.Random.InitState(7);

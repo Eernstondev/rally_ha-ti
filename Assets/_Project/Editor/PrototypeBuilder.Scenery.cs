@@ -28,7 +28,7 @@ namespace RallyAyiti.EditorTools
 
             Texture2D macro = PaintGround(th, f, area);
             Material mat = GroundMaterial(th, macro, area);
-            Quad("Sol", x0, x1, z0, z1, 0f, 0f, 6f, mat, true, area);
+            BuildTerrain(f, area, mat);
         }
 
         /// <summary>Texture vue de haut de tout le terrain : terre au bord de la piste, herbe variée, sable vers la mer.</summary>
@@ -55,8 +55,9 @@ namespace RallyAyiti.EditorTools
                 return Mathf.Lerp(a, c, tz);
             }
 
-            var dirt = new Color(0.56f, 0.44f, 0.31f);
-            var dirtDark = new Color(0.44f, 0.34f, 0.24f);
+            // Bas-côtés : sable piétiné sur une piste de plage, terre battue ailleurs.
+            Color dirt = th.SandTrack ? new Color(0.8f, 0.7f, 0.52f) : new Color(0.56f, 0.44f, 0.31f);
+            Color dirtDark = th.SandTrack ? new Color(0.68f, 0.58f, 0.43f) : new Color(0.44f, 0.34f, 0.24f);
             var grassA = new Color(0.35f, 0.5f, 0.2f);
             var grassB = new Color(0.47f, 0.57f, 0.25f);
             var grassDark = new Color(0.24f, 0.37f, 0.15f);
@@ -185,7 +186,7 @@ namespace RallyAyiti.EditorTools
                 Frame fr = FrameAtDistance(line, length, along);
                 Vector3 p = fr.Pos + fr.Right * side * (HalfWidth + UnityEngine.Random.Range(2f, 3.6f));
                 if (!Free(p, 0.45f)) continue;
-                if (SpawnPerson(root, p, Quaternion.LookRotation(-fr.Right * side), UnityEngine.Random.value < 0.6f) != null)
+                if (SpawnPerson(root, OnGround(p), Quaternion.LookRotation(-fr.Right * side), UnityEngine.Random.value < 0.6f) != null)
                     Occupied.Add((p, 0.45f));
             }
 
@@ -196,7 +197,7 @@ namespace RallyAyiti.EditorTools
             foreach (float along in new[] { -34f, -20f, -7f, 9f })
             {
                 Frame fr = FrameAtDistance(line, length, along);
-                Vector3 l = fr.Pos - fr.Right * (HalfWidth + 1.4f), r = fr.Pos + fr.Right * (HalfWidth + 1.4f);
+                Vector3 l = OnGround(fr.Pos - fr.Right * (HalfWidth + 1.4f)), r = OnGround(fr.Pos + fr.Right * (HalfWidth + 1.4f));
                 foreach (Vector3 p in new[] { l, r })
                 {
                     Prim(PrimitiveType.Cylinder, "PotoFanyon", root, p + Vector3.up * 3.6f, new Vector3(0.14f, 3.6f, 0.14f), pole, Quaternion.identity);
@@ -256,7 +257,8 @@ namespace RallyAyiti.EditorTools
             }
             GameObject go = CreateMeshObject("Fanyon", verts, uvs, tris, mat, false);
             go.transform.SetParent(parent, true);
-            go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.TwoSided;
+            // Pas d'ombre : vues du soleil, les guirlandes zébraient toute la piste.
+            go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
         }
 
         // ---------- Entourage ----------
@@ -310,6 +312,7 @@ namespace RallyAyiti.EditorTools
             for (int attempt = 0; attempt < count * 12 && placed < count; attempt++)
             {
                 if (!TrySpot(th, f, area, dMin, dMax, radius, out Vector3 p)) continue;
+                p = OnGround(p);
                 Transform t = ArtLibrary.Spawn(model, root);
                 if (t == null) return;
                 float s = UnityEngine.Random.Range(minScale, maxScale);
@@ -410,7 +413,8 @@ namespace RallyAyiti.EditorTools
                 Vector3 p = fr.Pos + fr.Right * side * (HalfWidth + (taptap ? 6.5f : 5.2f));
                 float r = taptap ? 2.6f : 1.5f;
                 if (!th.LandOk(p) || MinDistanceToTrack(f, p) < HalfWidth + 4.5f || !Free(p, r)) continue;
-                Quaternion rot = Quaternion.LookRotation(fr.Fwd * (UnityEngine.Random.value < 0.5f ? 1f : -1f)) *
+                Vector3 flat = new Vector3(fr.Fwd.x, 0f, fr.Fwd.z).normalized;
+                Quaternion rot = Quaternion.LookRotation(flat * (UnityEngine.Random.value < 0.5f ? 1f : -1f)) *
                                  Quaternion.Euler(0f, UnityEngine.Random.Range(-8f, 8f), 0f);
                 if (taptap) ParkVehicle(root, "TapTap", 3.4f, p, rot, UnityEngine.Random.value < 0.5f ? "TapTap_Side_A.png" : "TapTap_Side_B.png");
                 else ParkVehicle(root, "MotoTaxi", 2.1f, p, rot);
@@ -423,7 +427,7 @@ namespace RallyAyiti.EditorTools
         {
             var holder = new GameObject("Pake " + model).transform;
             holder.SetParent(root, false);
-            holder.SetPositionAndRotation(pos, rot);
+            holder.SetPositionAndRotation(OnGround(pos), rot);
             Dictionary<string, Material> paint = null;
             if (sideArt != null) paint = new Dictionary<string, Material> { ["TT_SideArt"] = ArtLibrary.Get("TT_SideArt", null, sideArt) };
             Transform vehicle = ArtLibrary.Spawn(model, holder, paint);

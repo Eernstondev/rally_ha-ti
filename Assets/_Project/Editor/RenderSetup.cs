@@ -35,6 +35,7 @@ namespace RallyAyiti.EditorTools
                 var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
                 if (renderer != null) AssignPostProcessData(renderer);
             }
+            EnsureSsao(AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath));
 
             Configure(pipeline);
             GraphicsSettings.defaultRenderPipeline = pipeline;
@@ -46,6 +47,54 @@ namespace RallyAyiti.EditorTools
             }
             QualitySettings.SetQualityLevel(current, false);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Occlusion ambiante (SSAO) : ombres de contact sous les karts, au pied des murs et des arbres.</summary>
+        private static void EnsureSsao(UniversalRendererData renderer)
+        {
+            if (renderer == null) return;
+            // La classe est interne à URP : on la retrouve par son nom.
+            System.Type type = typeof(UniversalRendererData).Assembly.GetType("UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion");
+            if (type == null) return;
+            ScriptableRendererFeature ssao = null;
+            foreach (ScriptableRendererFeature f in renderer.rendererFeatures)
+                if (f != null && f.GetType() == type) ssao = f;
+
+            if (ssao == null)
+            {
+                ssao = (ScriptableRendererFeature)ScriptableObject.CreateInstance(type);
+                ssao.name = "SSAO";
+                AssetDatabase.AddObjectToAsset(ssao, renderer);
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(ssao, out _, out long localId);
+
+                var so = new SerializedObject(renderer);
+                SerializedProperty features = so.FindProperty("m_RendererFeatures");
+                SerializedProperty map = so.FindProperty("m_RendererFeatureMap");
+                features.arraySize++;
+                features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = ssao;
+                map.arraySize++;
+                map.GetArrayElementAtIndex(map.arraySize - 1).longValue = localId;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            // Réglages légers : demi-résolution, peu d'échantillons (le jeu vise le mobile).
+            var sso = new SerializedObject(ssao);
+            Set(sso, "m_Settings.Intensity", 1.4f);
+            Set(sso, "m_Settings.Radius", 0.3f);
+            Set(sso, "m_Settings.DirectLightingStrength", 0.3f);
+            SerializedProperty down = sso.FindProperty("m_Settings.Downsample");
+            if (down != null) down.boolValue = true;
+            SerializedProperty samples = sso.FindProperty("m_Settings.Samples");
+            if (samples != null) samples.intValue = 2;
+            sso.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(renderer);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void Set(SerializedObject so, string path, float value)
+        {
+            SerializedProperty p = so.FindProperty(path);
+            if (p != null) p.floatValue = value;
         }
 
         /// <summary>Profil de post-traitement partagé par tous les circuits.</summary>

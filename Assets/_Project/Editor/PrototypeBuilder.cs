@@ -57,6 +57,9 @@ namespace RallyAyiti.EditorTools
             public float Dry;
             public int Trees, Bushes, Flowers, Bananas, Grass, Rocks, Fences, Villages, Parked, Billboards;
             public string Ambience;
+            // Réalisme : relief (m), piste en sable tassé plutôt qu'en asphalte.
+            public float Relief;
+            public bool SandTrack;
 
             public bool LandOk(Vector3 p) => !Coast || p.x < CoastX - 55f;
         }
@@ -73,6 +76,7 @@ namespace RallyAyiti.EditorTools
             RampT = 0.55f, Boosts = new[] { (0.2f, 0f), (0.8f, -3f) }, ItemRows = new[] { 0.1f, 0.42f, 0.7f },
             Dry = 0.55f, Trees = 90, Bushes = 150, Flowers = 60, Bananas = 70, Grass = 750, Rocks = 60, Fences = 30,
             Villages = 9, Parked = 16, Billboards = 5, Ambience = "Ambience_City",
+            Relief = 6f, SandTrack = false,
         };
 
         private static readonly Theme Labadie = new()
@@ -89,6 +93,7 @@ namespace RallyAyiti.EditorTools
             Arch = true,
             Dry = 0.2f, Trees = 130, Bushes = 170, Flowers = 45, Bananas = 110, Grass = 900, Rocks = 70, Fences = 22,
             Villages = 6, Parked = 10, Billboards = 4, Ambience = "Ambience_Ocean",
+            Relief = 7f, SandTrack = true,
         };
 
         private static readonly string[] WallTextures =
@@ -170,6 +175,8 @@ namespace RallyAyiti.EditorTools
             EnsureFolder(Root + "/Data");
             EnsureFolder(Root + "/Prefabs");
             Occupied.Clear();
+            _th = th;
+            _hf = null;
 
             int kartLayer = EnsureLayer("Kart");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -184,8 +191,9 @@ namespace RallyAyiti.EditorTools
 
             CreatePaintedGround(th, frames);
             if (th.Coast) CreateSea(th, frames, m);
-            CreateRoad(frames, m);
+            CreateRoad(th, frames, m);
             CreateWalls(frames, m);
+            CreateBorders(th, frames);
             CreateStartLine(line, m);
             Transform checkpoints = CreateCheckpoints(line);
             CreateRamp(line, th.RampT, m);
@@ -324,7 +332,10 @@ namespace RallyAyiti.EditorTools
             Spline spline = container.Spline;
             spline.Clear();
             foreach (Vector2 k in th.Knots)
-                spline.Add(new BezierKnot(new float3(k.x * th.Scale, 0f, k.y * th.Scale)), TangentMode.AutoSmooth);
+            {
+                float x = k.x * th.Scale, z = k.y * th.Scale;
+                spline.Add(new BezierKnot(new float3(x, RawHeight(x, z), z)), TangentMode.AutoSmooth);
+            }
             spline.Closed = true;
             return container;
         }
@@ -332,8 +343,10 @@ namespace RallyAyiti.EditorTools
         private static Frame FrameAt(SplineContainer line, float t)
         {
             line.Evaluate(Mathf.Repeat(t, 1f), out float3 p, out float3 tan, out _);
-            Vector3 fwd = new Vector3(tan.x, 0f, tan.z).normalized;
-            return new Frame { Pos = new Vector3(p.x, 0f, p.z), Fwd = fwd, Right = Vector3.Cross(Vector3.up, fwd) };
+            // Avant : suit la pente de la piste (plaques, rampe, ligne d'arrivée inclinées avec elle). Côté : toujours horizontal.
+            Vector3 fwd = ((Vector3)tan).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+            return new Frame { Pos = new Vector3(p.x, p.y, p.z), Fwd = fwd, Right = right };
         }
 
         private static Frame[] SampleTrack(SplineContainer line)
@@ -434,9 +447,11 @@ namespace RallyAyiti.EditorTools
             return go;
         }
 
-        private static void CreateRoad(Frame[] f, Mats m)
+        private static void CreateRoad(Theme th, Frame[] f, Mats m)
         {
-            CreateFlatStrip("Wout", f, -HalfWidth, HalfWidth, 0.02f, 5f, m.Road, true);
+            Material surface = ArtLibrary.Get(th.SandTrack ? "Track_Sand" : "Track_Asphalt");
+            CreateFlatStrip("Wout", f, -HalfWidth, HalfWidth, 0.02f, 5f, surface, true);
+            if (th.SandTrack) return; // Piste de plage : pas de bordures peintes, le sable rejoint la plage.
             CreateFlatStrip("BodiGoch", f, -HalfWidth, -HalfWidth + 0.8f, 0.035f, 2f, m.Kerb, false);
             CreateFlatStrip("BodiDwat", f, HalfWidth - 0.8f, HalfWidth, 0.035f, 2f, m.Kerb, false);
             CreateFlatStrip("LigneGauche", f, -HalfWidth + 1.0f, -HalfWidth + 1.2f, 0.03f, 5f, m.Line, false);
@@ -492,7 +507,9 @@ namespace RallyAyiti.EditorTools
                     tris[t + 6] = j * 2; tris[t + 7] = i * 2 + 1; tris[t + 8] = i * 2;
                     tris[t + 9] = j * 2 + 1; tris[t + 10] = i * 2 + 1; tris[t + 11] = j * 2;
                 }
-                CreateMeshObject(side < 0 ? "MiGoch" : "MiDwat", verts, uvs, tris, m.Wall, true);
+                // Mur invisible : il garde les karts sur la piste, le décor naturel (CreateBorders) se voit à sa place.
+                GameObject wall = CreateMeshObject(side < 0 ? "MiGoch" : "MiDwat", verts, uvs, tris, m.Wall, true);
+                Object.DestroyImmediate(wall.GetComponent<MeshRenderer>());
             }
         }
 
@@ -589,7 +606,7 @@ namespace RallyAyiti.EditorTools
         {
             Frame f = FrameAt(line, 0f);
             var root = new GameObject("PotayLabadi").transform;
-            root.SetPositionAndRotation(f.Pos, Quaternion.LookRotation(f.Fwd));
+            root.SetPositionAndRotation(f.Pos, Quaternion.LookRotation(new Vector3(f.Fwd.x, 0f, f.Fwd.z)));
             Material pillar = ArtLibrary.Get("Wall_Paint", null, "Wall_Turquoise.png");
             Material board = ArtLibrary.Get("Concrete_Slab");
             Material sign = ArtLibrary.Get("Sign_Labadi");
@@ -632,6 +649,7 @@ namespace RallyAyiti.EditorTools
         {
             Transform t = ArtLibrary.Spawn(model, parent, overrides);
             if (t == null) return null;
+            pos = OnGround(pos);
             t.SetPositionAndRotation(pos, rot);
             Occupied.Add((pos, radius));
             return t;
@@ -826,7 +844,7 @@ namespace RallyAyiti.EditorTools
                 float dist = ring + UnityEngine.Random.Range(0f, 140f);
                 var c = new Vector3(b.center.x + Mathf.Cos(angle) * dist, 0f, b.center.z + Mathf.Sin(angle) * dist);
                 if (th.Coast && c.x > th.CoastX - 60f) continue;
-                CreateHill(root, c, UnityEngine.Random.Range(90f, 170f), UnityEngine.Random.Range(40f, 95f), m.Hill, made * 1.7f);
+                CreateHill(root, OnGround(c), UnityEngine.Random.Range(90f, 170f), UnityEngine.Random.Range(40f, 95f), m.Hill, made * 1.7f);
                 made++;
             }
         }
@@ -1061,6 +1079,15 @@ namespace RallyAyiti.EditorTools
             var fx = root.AddComponent<KartEffects>();
             SetRefArray(fx, "driftSparks", new Object[] { sparksL, sparksR });
             SetRef(fx, "boostFlame", flame);
+            bool sand = _th != null && _th.SandTrack;
+            SetRef(fx, "dust", DustTrail(root.transform, new Vector3(0f, 0.25f, back),
+                sand ? new Color(0.86f, 0.77f, 0.6f, 0.55f) : new Color(0.62f, 0.55f, 0.47f, 0.4f)));
+            SetRefArray(fx, "skidMarks", new Object[]
+            {
+                SkidTrail(root.transform, new Vector3(-0.45f, 0.05f, back * 0.85f)),
+                SkidTrail(root.transform, new Vector3(0.45f, 0.05f, back * 0.85f)),
+            });
+            SetFloat(kart, "roadRoughness", sand ? 0.05f : 0.02f);
 
             if (vehicle != null)
             {
@@ -1159,9 +1186,15 @@ namespace RallyAyiti.EditorTools
             var composer = vcGo.AddComponent<CinemachineRotationComposer>();
             composer.TargetOffset = new Vector3(0f, 1.0f, 2.6f);
 
+            var shake = vcGo.AddComponent<CinemachineBasicMultiChannelPerlin>();
+            shake.NoiseProfile = ShakeProfile();
+            shake.AmplitudeGain = 0f;
+
             var fx = vcGo.AddComponent<KartCameraFx>();
             SetRef(fx, "cam", vc);
             SetRef(fx, "kart", player);
+            SetRef(fx, "noise", shake);
+            SetFloat(fx, "baseFov", 62f);
             return (vc, fx);
         }
 
