@@ -127,6 +127,14 @@ namespace RallyAyiti.PowerUps
             return best;
         }
 
+        /// <summary>Lance le bonus tenu, s'il y en a un (tests, aides).</summary>
+        public bool TryUse()
+        {
+            if (Current == PowerUpType.None || !_kart.ControlEnabled || _kart.IsStunned) return false;
+            Use();
+            return true;
+        }
+
         private void Use()
         {
             Transform t = _kart.transform;

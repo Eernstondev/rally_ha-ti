@@ -130,8 +130,8 @@ namespace RallyAyiti.EditorTools
             Text coins = Label(canvas, "Goud", display, 40, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -162f), new Vector2(300f, 56f), Sun);
 
             // Bouton de pouvoir : carré doré qui se remplit, simule la gâchette gauche de la manette.
-            RectTransform button = Panel(canvas, "Pouvwa", new Vector2(1f, 0f), new Vector2(-480f, 300f), new Vector2(170f, 170f),
-                new Color(Mango.r, Mango.g, Mango.b, 0.55f), Sun);
+            RectTransform button = Panel(canvas, "Pouvwa", new Vector2(1f, 0f), new Vector2(-490f, 330f), new Vector2(170f, 170f),
+                new Color(Night.r, Night.g, Night.b, 0.9f), Sun);
             var fillGo = new GameObject("Jaj", typeof(RectTransform));
             fillGo.transform.SetParent(button, false);
             var fill = (RectTransform)fillGo.transform;
@@ -146,7 +146,7 @@ namespace RallyAyiti.EditorTools
             fillImg.raycastTarget = false;
             var onScreen = button.gameObject.AddComponent<OnScreenButton>();
             SetString(onScreen, "m_ControlPath", "<Gamepad>/leftShoulder");
-            Text label = Label(button, "Teks", display, 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(160f, 160f), Night);
+            Text label = Label(button, "Teks", display, 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(160f, 160f), Paper);
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.text = "POUVWA";
 

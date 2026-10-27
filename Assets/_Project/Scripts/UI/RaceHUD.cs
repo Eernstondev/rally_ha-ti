@@ -104,7 +104,8 @@ namespace RallyAyiti.UI
                 powerFill.anchorMax = new Vector2(1f, _power.Charge01);
                 if (powerBackground != null)
                 {
-                    float glow = _power.Ready ? 0.75f + 0.25f * Mathf.Sin(Time.time * 8f) : 0.55f;
+                    // Opaque tant que la jauge se remplit ; quand elle est pleine, le contour doré clignote à travers.
+                    float glow = _power.Ready ? 0.6f + 0.3f * Mathf.Sin(Time.time * 8f) : 0.92f;
                     Color c = powerBackground.color;
                     c.a = glow;
                     powerBackground.color = c;

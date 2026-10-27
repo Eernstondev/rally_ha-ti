@@ -111,6 +111,14 @@ namespace RallyAyiti.PowerUps
             return n;
         }
 
+        /// <summary>Déclenche le pouvoir s'il est chargé (bouton tactile, tests).</summary>
+        public bool TryActivate()
+        {
+            if (!Ready || !_kart.ControlEnabled) return false;
+            Use();
+            return true;
+        }
+
         private void Use()
         {
             Charge01 = 0f;
