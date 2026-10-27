@@ -14,6 +14,8 @@ namespace RallyAyiti.PowerUps
         [SerializeField] private Material waveMaterial;
         [SerializeField] private Material shieldMaterial;
         [SerializeField] private Material boltMaterial;
+        [Tooltip("Étincelles étoilées partagées (bonus ramassé, pièces, boost).")]
+        [SerializeField] private ParticleSystem sparkles;
 
         public static RaceFx Instance { get; private set; }
 
@@ -74,6 +76,14 @@ namespace RallyAyiti.PowerUps
         {
             if (Instance == null || kart == null) return;
             Instance.StartCoroutine(Instance.BubbleRoutine(kart, color));
+        }
+
+        /// <summary>Gerbe d'étoiles scintillantes (bonus ramassé, pièce, départ de boost).</summary>
+        public static void Sparkle(Vector3 position, Color color, int count = 14)
+        {
+            if (Instance == null || Instance.sparkles == null) return;
+            var p = new ParticleSystem.EmitParams { position = position, applyShapeToPosition = true, startColor = color };
+            Instance.sparkles.Emit(p, count);
         }
 
         /// <summary>Petite gerbe colorée (pikliz, étincelles de réparation).</summary>

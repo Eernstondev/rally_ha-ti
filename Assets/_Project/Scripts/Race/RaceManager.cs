@@ -14,6 +14,8 @@ namespace RallyAyiti.Race
         [SerializeField] private Transform checkpointsRoot;
         [SerializeField, Min(1)] private int totalLaps = 3;
         [SerializeField, Min(1)] private int countdownSeconds = 3;
+        [Tooltip("Survol cinématique joué avant le compte à rebours (optionnel).")]
+        [SerializeField] private RaceIntro intro;
 
         public int TotalLaps => totalLaps;
         public int CheckpointCount => _checkpoints.Length;
@@ -96,6 +98,8 @@ namespace RallyAyiti.Race
         private IEnumerator Start()
         {
             SetControl(false);
+            yield return null; // RaceSetup a choisi le pilote du joueur.
+            if (intro != null && Player != null) yield return intro.Play(Player.transform);
             var second = new WaitForSeconds(1f);
             for (int i = countdownSeconds; i > 0; i--)
             {

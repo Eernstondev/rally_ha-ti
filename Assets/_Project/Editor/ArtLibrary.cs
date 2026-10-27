@@ -103,6 +103,7 @@ namespace RallyAyiti.EditorTools
             ["Lamp_Glow"] = new(C(1f, 0.82f, 0.5f), 0.5f, 0f, emission: 3f),
             ["Drum_Paint"] = new(C(0.15f, 0.32f, 0.7f), 0.45f, 0.5f),
             ["Checker"] = new(Color.white, 0.2f, tex: "Checker.png"),
+            ["Boost_Pad"] = new(Color.white, 0.6f, tex: "Boost_Pad.png", emission: 1.4f),
             ["Morne"] = new(Color.white, 0.05f, tex: "Hill.png", normal: "Sand_N.png"),
             ["Sign_Labadi"] = new(Color.white, 0.4f, tex: "Sign_Labadi.png"),
             ["Pennants"] = new(Color.white, 0.3f, tex: "Pennants.png", cutout: true),

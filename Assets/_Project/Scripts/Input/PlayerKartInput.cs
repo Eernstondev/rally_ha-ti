@@ -73,15 +73,45 @@ namespace RallyAyiti.Kart
             _steer.Dispose(); _throttle.Dispose(); _brake.Dispose(); _drift.Dispose(); _item.Dispose(); _horn.Dispose(); _power.Dispose();
         }
 
-        public KartInput ReadInput() => new()
+        [Tooltip("Dérapage automatique : maintenir le braquage à fond fait partir le kart en glissade (comme Beach Buggy).")]
+        [SerializeField] private bool autoDrift = true;
+        [SerializeField] private float autoDriftHold = 0.35f;
+
+        private float _fullSteerTime;
+        private int _autoDriftDir;
+
+        public KartInput ReadInput()
         {
-            Steer = Mathf.Clamp(_steer.ReadValue<float>(), -1f, 1f),
-            Throttle = autoAccelerate || _throttle.IsPressed() ? 1f : 0f,
-            Brake = _brake.IsPressed(),
-            Drift = _drift.IsPressed(),
-            UseItem = _item.WasPressedThisFrame(),
-            Horn = _horn.WasPressedThisFrame(),
-            Power = _power.WasPressedThisFrame(),
-        };
+            float steer = Mathf.Clamp(_steer.ReadValue<float>(), -1f, 1f);
+            return new KartInput
+            {
+                Steer = steer,
+                Throttle = autoAccelerate || _throttle.IsPressed() ? 1f : 0f,
+                Brake = _brake.IsPressed(),
+                Drift = _drift.IsPressed() || AutoDrift(steer),
+                UseItem = _item.WasPressedThisFrame(),
+                Horn = _horn.WasPressedThisFrame(),
+                Power = _power.WasPressedThisFrame(),
+            };
+        }
+
+        /// <summary>Glissade tant que le braquage reste du même côté ; elle s'arrête quand on relâche ou qu'on change de côté.</summary>
+        private bool AutoDrift(float steer)
+        {
+            if (!autoDrift) return false;
+            int side = steer > 0.85f ? 1 : steer < -0.85f ? -1 : 0;
+            if (_autoDriftDir != 0)
+            {
+                if (Mathf.Abs(steer) < 0.35f || steer * _autoDriftDir < 0f) _autoDriftDir = 0;
+                return _autoDriftDir != 0;
+            }
+            _fullSteerTime = side != 0 ? _fullSteerTime + Time.deltaTime : 0f;
+            if (_fullSteerTime >= autoDriftHold)
+            {
+                _autoDriftDir = side;
+                _fullSteerTime = 0f;
+            }
+            return _autoDriftDir != 0;
+        }
     }
 }

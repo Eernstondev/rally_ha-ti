@@ -14,8 +14,7 @@ namespace RallyAyiti.UI
     /// <summary>Place, tour, chrono, vitesse, messages centraux (décompte, résultat) et tableau d'arrivée.</summary>
     public sealed class RaceHUD : MonoBehaviour
     {
-        private static readonly string[] Places =
-            { "Premye plas !", "Dezyèm plas", "Twazyèm plas", "Katriyèm plas", "Senkyèm plas", "Sizyèm plas" };
+        private static readonly string[] Places = { "1e !", "2yèm", "3yèm", "4yèm", "5yèm", "6yèm" };
 
         [SerializeField] private RaceManager race;
         [SerializeField] private Text positionText;
@@ -131,8 +130,24 @@ namespace RallyAyiti.UI
             }
         }
 
+        private float _centerPop;
+
+        /// <summary>Le message central arrive en grand puis se pose (effet « claque » des comptes à rebours arcade).</summary>
+        private void AnimateCenter()
+        {
+            if (_centerPop <= 0f || centerText == null) return;
+            _centerPop = Mathf.Max(0f, _centerPop - Time.unscaledDeltaTime * 4f);
+            float t = 1f - _centerPop;
+            float scale = t < 0.6f ? Mathf.Lerp(2.2f, 0.9f, t / 0.6f) : Mathf.Lerp(0.9f, 1f, (t - 0.6f) / 0.4f);
+            centerText.transform.localScale = Vector3.one * scale;
+            Color c = centerText.color;
+            c.a = Mathf.Clamp01(t * 3f);
+            centerText.color = c;
+        }
+
         private void Update()
         {
+            AnimateCenter();
             LapTracker player = race.Player;
             if (player == null) return;
             UpdateExtras(player);
@@ -163,7 +178,7 @@ namespace RallyAyiti.UI
 
         private void OnCountdown(int n)
         {
-            Show(n > 0 ? n.ToString() : "ALE !", n == 0 ? 1f : 0f);
+            Show(n > 0 ? n.ToString() : "ALE !!", n == 0 ? 1f : 0f);
         }
 
         private void OnRaceEnded()
@@ -201,6 +216,7 @@ namespace RallyAyiti.UI
             if (_hide != null) StopCoroutine(_hide);
             centerText.text = message;
             centerText.gameObject.SetActive(true);
+            _centerPop = 1f;
             if (hideAfter > 0f) _hide = StartCoroutine(HideAfter(hideAfter));
         }
 
