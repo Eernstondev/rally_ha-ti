@@ -190,6 +190,9 @@ namespace RallyAyiti.EditorTools
                     Occupied.Add((p, 0.45f));
             }
 
+            // Jour de course : barrières, drapeaux, tentes, tribunes (Kenney).
+            CreateRaceDay(th, f, line, root);
+
             // Guirlandes de fanions au-dessus de la ligne droite.
             Material pennants = ArtLibrary.Get("Pennants");
             Material pole = ArtLibrary.Get("Paint_White");
@@ -401,6 +404,69 @@ namespace RallyAyiti.EditorTools
         }
 
         /// <summary>Tap-taps et motos garés au bord de la route, sans chauffeur.</summary>
+        /// <summary>Voitures du quotidien (Kenney, Quaternius) garées au bord du circuit.</summary>
+        private static readonly string[] ParkedCars =
+        {
+            "Car_Normal1", "Car_Normal2", "Car_SuvB", "Car_TaxiB", "Car_Van", "Car_Delivery", "Car_Suv", "Car_Hatch",
+            "Car_Truck", "Car_Sedan", "Car_Taxi",
+        };
+
+        /// <summary>
+        /// Ambiance de jour de course autour de la ligne de départ : barrières rouges et blanches devant la foule,
+        /// drapeaux à damier, tours à banderole, tentes, tribunes couvertes et grands projecteurs.
+        /// </summary>
+        private static void CreateRaceDay(Theme th, Frame[] f, SplineContainer line, Transform root)
+        {
+            if (!ArtLibrary.HasModel("Kit_Tent")) return;
+            float length = line.CalculateLength();
+            float edge = th.Street ? HalfWidth + SidewalkWidth - 0.4f : HalfWidth + 1.3f;
+
+            // Barrières alternées le long de la ligne droite, de part et d'autre.
+            foreach (float side in new[] { -1f, 1f })
+            {
+                int k = 0;
+                for (float along = -46f; along < 28f; along += 1.45f, k++)
+                {
+                    if (Mathf.Abs(along) < 2.5f) continue; // passage des mâts du portique
+                    Frame fr = FrameAtDistance(line, length, along);
+                    Vector3 p = fr.Pos + fr.Right * side * edge;
+                    if (!th.LandOk(p) || !Free(p, 0.35f)) continue;
+                    Transform b = ArtLibrary.Spawn(k % 2 == 0 ? "Kit_BarrierRed" : "Kit_BarrierWhite", root);
+                    if (b == null) continue;
+                    b.SetPositionAndRotation(OnGround(p), Quaternion.LookRotation(fr.Right * side));
+                }
+            }
+
+            // Drapeaux et tours à banderole.
+            (float along, string model, float side)[] poles =
+            {
+                (1.5f, "Kit_FlagCheckers", -1f), (1.5f, "Kit_FlagCheckers", 1f), (-14f, "Kit_BannerRed", -1f), (-14f, "Kit_BannerGreen", 1f),
+                (16f, "Kit_BannerGreen", -1f), (16f, "Kit_BannerRed", 1f), (-30f, "Kit_FlagRed", 1f), (-30f, "Kit_FlagGreen", -1f),
+            };
+            foreach ((float along, string model, float side) in poles)
+            {
+                Frame fr = FrameAtDistance(line, length, along);
+                Vector3 p = fr.Pos + fr.Right * side * (edge + 1.1f);
+                if (th.LandOk(p) && Free(p, 0.8f)) Place(model, root, p, Quaternion.LookRotation(-fr.Right * side), 0.8f);
+            }
+
+            // Tentes et tribunes couvertes derrière la foule ; projecteurs aux extrémités.
+            (float along, string model, float side, float dist, float radius)[] big =
+            {
+                (-40f, "Kit_TentLong", 1f, 11f, 5f), (-22f, "Kit_Tent", -1f, 10.5f, 3.5f), (-4f, "Kit_TentClosed", 1f, 10.5f, 3.5f),
+                (20f, "Kit_Tent", -1f, 10.5f, 3.5f), (-58f, "Kit_Grandstand", -1f, 14f, 6f), (36f, "Kit_GrandstandRound", 1f, 15f, 7f),
+                (-50f, "Kit_LightPost", 1f, 6f, 1f), (30f, "Kit_LightPost", -1f, 6f, 1f),
+            };
+            foreach ((float along, string model, float side, float dist, float radius) in big)
+            {
+                Frame fr = FrameAtDistance(line, length, along);
+                Vector3 p = fr.Pos + fr.Right * side * (HalfWidth + dist);
+                if (!th.LandOk(p) || MinDistanceToTrack(f, p) < HalfWidth + dist - 2f || !Free(p, radius)) continue;
+                Transform t = Place(model, root, p, Quaternion.LookRotation(-fr.Right * side), radius);
+                if (t != null && model.StartsWith("Kit_Tent")) SpawnPerson(root, OnGround(p + fr.Fwd * 1.2f), Quaternion.LookRotation(-fr.Right * side), false);
+            }
+        }
+
         private static void PlaceParkedVehicles(Theme th, Frame[] f, Transform root)
         {
             int placed = 0;
@@ -409,14 +475,17 @@ namespace RallyAyiti.EditorTools
                 int i = UnityEngine.Random.Range(Samples / 14, Samples - Samples / 14);
                 Frame fr = f[i];
                 float side = UnityEngine.Random.value < 0.5f ? -1f : 1f;
-                bool taptap = UnityEngine.Random.value < 0.55f;
-                Vector3 p = fr.Pos + fr.Right * side * (HalfWidth + (taptap ? 6.5f : 5.2f));
-                float r = taptap ? 2.6f : 1.5f;
+                float roll = UnityEngine.Random.value;
+                bool taptap = roll < 0.35f;
+                bool car = roll >= 0.55f && ArtLibrary.HasModel(ParkedCars[0]);
+                Vector3 p = fr.Pos + fr.Right * side * (HalfWidth + (taptap ? 6.5f : car ? 6f : 5.2f));
+                float r = taptap ? 2.6f : car ? 2.5f : 1.5f;
                 if (!th.LandOk(p) || MinDistanceToTrack(f, p) < HalfWidth + 4.5f || !Free(p, r)) continue;
                 Vector3 flat = new Vector3(fr.Fwd.x, 0f, fr.Fwd.z).normalized;
                 Quaternion rot = Quaternion.LookRotation(flat * (UnityEngine.Random.value < 0.5f ? 1f : -1f)) *
                                  Quaternion.Euler(0f, UnityEngine.Random.Range(-8f, 8f), 0f);
-                if (taptap) ParkVehicle(root, "TapTap", 3.4f, p, rot, UnityEngine.Random.value < 0.5f ? "TapTap_Side_A.png" : "TapTap_Side_B.png");
+                if (car) Place(ParkedCars[UnityEngine.Random.Range(0, ParkedCars.Length)], root, p, rot, r);
+                else if (taptap) ParkVehicle(root, "TapTap", 3.4f, p, rot, UnityEngine.Random.value < 0.5f ? "TapTap_Side_A.png" : "TapTap_Side_B.png");
                 else ParkVehicle(root, "MotoTaxi", 2.1f, p, rot);
                 Occupied.Add((p, r));
                 placed++;

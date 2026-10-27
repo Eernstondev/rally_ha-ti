@@ -560,6 +560,12 @@ namespace RallyAyiti.EditorTools
         }
 
         /// <summary>Spectateur habillé au hasard (chemise, pantalon, teint).</summary>
+        private static readonly string[] CrowdBodies =
+        {
+            "Casual_Male", "Casual_Female", "Casual2_Male", "Casual3_Male", "Worker_Male", "OldClassy_Female",
+            "Chef_Female", "Casual_Bald", "Doctor_Female_Young", "Casual3_Female",
+        };
+
         private static Transform SpawnPerson(Transform parent, Vector3 pos, Quaternion rot, bool cheering)
         {
             Color[] shirts = { Sun, Hibiscus, Lagoon, Paper, Mango, Violet, Hex(0x2a5bd7), Green, Hex(0xd94141) };
@@ -571,7 +577,15 @@ namespace RallyAyiti.EditorTools
                 ["Ppl_Pants"] = ArtLibrary.Get("Ppl_Pants", pants[UnityEngine.Random.Range(0, pants.Length)]),
                 ["Drv_Skin"] = ArtLibrary.Get("Drv_Skin", skins[UnityEngine.Random.Range(0, skins.Length)]),
             };
-            Transform t = ArtLibrary.Spawn(cheering ? "Person_Cheer" : "Person_Stand", parent, outfit);
+            // Passants ronds avec visage (Quaternius) ; anciens personnages en blocs si les modèles manquent.
+            outfit["Q_Skin"] = ArtLibrary.Get("Q_Skin", SkinTones[UnityEngine.Random.Range(0, SkinTones.Length)]);
+            outfit["Q_Shirt"] = ArtLibrary.Get("Q_Shirt", shirts[UnityEngine.Random.Range(0, shirts.Length)]);
+            outfit["Q_Main"] = outfit["Q_Shirt"];
+            outfit["Q_Clothes"] = outfit["Q_Shirt"];
+            outfit["Q_Pants"] = ArtLibrary.Get("Q_Pants", pants[UnityEngine.Random.Range(0, pants.Length)]);
+            string body = $"Moun_{CrowdBodies[UnityEngine.Random.Range(0, CrowdBodies.Length)]}_{(cheering ? "Cheer" : "Stand")}";
+            if (!ArtLibrary.HasModel(body)) body = cheering ? "Person_Cheer" : "Person_Stand";
+            Transform t = ArtLibrary.Spawn(body, parent, outfit);
             if (t == null) return null;
             t.SetPositionAndRotation(pos, rot * Quaternion.Euler(0f, UnityEngine.Random.Range(-25f, 25f), 0f));
             t.localScale = Vector3.one * UnityEngine.Random.Range(0.92f, 1.06f);
