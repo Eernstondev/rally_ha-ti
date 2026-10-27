@@ -115,7 +115,7 @@ namespace RallyAyiti.EditorTools
             ["Banana_Stem"] = new(C(0.45f, 0.55f, 0.28f), 0.25f),
             ["Bark_Dark"] = new(C(0.25f, 0.18f, 0.12f), 0.1f),
             ["Grass_Tuft"] = new(Color.white, 0.1f, tex: "Grass_Tuft.png", cutout: true),
-            ["Rock"] = new(C(0.55f, 0.51f, 0.45f), 0.12f, normal: "Sand_N.png"),
+            ["Rock"] = new(Color.white, 0.12f, tex: "Rock.png", normal: "Rock_N.png"),
             ["Ppl_Shirt"] = new(C(0.95f, 0.95f, 0.95f), 0.12f),
             ["Ppl_Pants"] = new(C(0.2f, 0.25f, 0.4f), 0.12f),
             ["Ppl_Hair"] = new(C(0.05f, 0.04f, 0.04f), 0.25f),

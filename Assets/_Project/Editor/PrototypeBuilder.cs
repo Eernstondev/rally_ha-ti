@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v10";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v11";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -179,6 +179,7 @@ namespace RallyAyiti.EditorTools
             EnsureFolder(Root + "/Data");
             EnsureFolder(Root + "/Prefabs");
             Occupied.Clear();
+            Crowd.Clear();
             _th = th;
             _hf = null;
 
@@ -239,6 +240,7 @@ namespace RallyAyiti.EditorTools
             SetInt(setup, "playerGridSlot", PlayerPilot);
             SetStringArray(setup, "vehicles", Pilots.Select(p => p.Model).ToArray());
 
+            CreateCrowdLife();
             EditorSceneManager.SaveScene(scene, th.ScenePath);
             UpdateBuildScenes();
             AssetDatabase.SaveAssets();

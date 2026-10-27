@@ -62,6 +62,7 @@ namespace RallyAyiti.EditorTools
             EnsureFolder(Root + "/Materials");
             EnsureFolder(Root + "/Data");
             Occupied.Clear();
+            Crowd.Clear();
             _th = null;
             _hf = null;
             _streetFrames = null;
@@ -79,6 +80,7 @@ namespace RallyAyiti.EditorTools
             CreateMenuCamera();
             CreateGameAudio();
             CreateMenuUi(turntable, models);
+            CreateCrowdLife();
 
             EditorSceneManager.SaveScene(scene, MenuScenePath);
             UpdateBuildScenes();
@@ -566,6 +568,25 @@ namespace RallyAyiti.EditorTools
             "Chef_Female", "Casual_Bald", "Doctor_Female_Young", "Casual3_Female",
         };
 
+        /// <summary>Personnes posées pendant la construction de la scène, animées ensuite par CrowdLife.</summary>
+        private static readonly List<(Transform person, bool cheering)> Crowd = new();
+
+        /// <summary>Un seul composant anime toute la foule ; les personnes ne doivent pas être statiques (batching).</summary>
+        private static void CreateCrowdLife()
+        {
+            Crowd.RemoveAll(c => c.person == null);
+            if (Crowd.Count == 0) return;
+            foreach ((Transform person, _) in Crowd)
+                foreach (Transform t in person.GetComponentsInChildren<Transform>(true)) t.gameObject.isStatic = false;
+            var life = new GameObject("FoulVivan").AddComponent<RallyAyiti.Environment.CrowdLife>();
+            SetRefArray(life, "people", Crowd.Select(c => (Object)c.person).ToArray());
+            SerializedProperty p = Prop(life, "cheering", out SerializedObject so);
+            p.arraySize = Crowd.Count;
+            for (int i = 0; i < Crowd.Count; i++) p.GetArrayElementAtIndex(i).boolValue = Crowd[i].cheering;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Crowd.Clear();
+        }
+
         private static Transform SpawnPerson(Transform parent, Vector3 pos, Quaternion rot, bool cheering)
         {
             Color[] shirts = { Sun, Hibiscus, Lagoon, Paper, Mango, Violet, Hex(0x2a5bd7), Green, Hex(0xd94141) };
@@ -587,6 +608,7 @@ namespace RallyAyiti.EditorTools
             if (!ArtLibrary.HasModel(body)) body = cheering ? "Person_Cheer" : "Person_Stand";
             Transform t = ArtLibrary.Spawn(body, parent, outfit);
             if (t == null) return null;
+            Crowd.Add((t, cheering));
             t.SetPositionAndRotation(pos, rot * Quaternion.Euler(0f, UnityEngine.Random.Range(-25f, 25f), 0f));
             t.localScale = Vector3.one * UnityEngine.Random.Range(0.92f, 1.06f);
             return t;
