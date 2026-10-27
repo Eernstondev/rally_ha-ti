@@ -20,6 +20,8 @@ namespace RallyAyiti.UI
             public string name;
             public string vehicle;
             public string tagline;
+            public string vehicleKey;
+            public string power;
             [Range(0f, 1f)] public float speed, acceleration, handling;
             public GameObject model;
         }
@@ -46,6 +48,12 @@ namespace RallyAyiti.UI
         [SerializeField] private Text trackTitle;
         [SerializeField] private RectTransform speedBar, accelBar, handlingBar;
         [SerializeField] private Button previousButton, nextButton, goButton;
+        [Header("Garage")]
+        [SerializeField] private Text gourdesText;
+        [SerializeField] private Text powerText;
+        [Tooltip("Vitesse, accélération, maniabilité.")]
+        [SerializeField] private Button[] upgradeButtons;
+        [SerializeField] private Text[] upgradeLabels;
 
         [Header("Plateau")]
         [SerializeField] private Transform turntable;
@@ -66,6 +74,11 @@ namespace RallyAyiti.UI
             previousButton.onClick.AddListener(() => ChangePilot(-1));
             nextButton.onClick.AddListener(() => ChangePilot(1));
             goButton.onClick.AddListener(Go);
+            for (int i = 0; i < upgradeButtons.Length; i++)
+            {
+                int stat = i;
+                upgradeButtons[i].onClick.AddListener(() => BuyUpgrade(stat));
+            }
             for (int i = 0; i < tracks.Length; i++)
             {
                 int index = i;
@@ -91,9 +104,9 @@ namespace RallyAyiti.UI
 
             PilotEntry p = pilots[_pilot];
             float k = 1f - Mathf.Exp(-8f * dt);
-            _speed = Mathf.Lerp(_speed, p.speed, k);
-            _accel = Mathf.Lerp(_accel, p.acceleration, k);
-            _handling = Mathf.Lerp(_handling, p.handling, k);
+            _speed = Mathf.Lerp(_speed, Boosted(p.speed, 0), k);
+            _accel = Mathf.Lerp(_accel, Boosted(p.acceleration, 1), k);
+            _handling = Mathf.Lerp(_handling, Boosted(p.handling, 2), k);
             Fill(speedBar, _speed);
             Fill(accelBar, _accel);
             Fill(handlingBar, _handling);
@@ -156,7 +169,33 @@ namespace RallyAyiti.UI
             vehicleName.text = p.vehicle;
             tagline.text = p.tagline;
             pilotCounter.text = $"{_pilot + 1} / {pilots.Length}";
+            if (powerText != null) powerText.text = p.power;
             _pop = 0f;
+            ShowGarage();
+        }
+
+        /// <summary>Valeur de la barre avec les améliorations achetées (+6 % par niveau).</summary>
+        private float Boosted(float baseValue, int stat) =>
+            Mathf.Clamp01(baseValue + 0.06f * GameSettings.Upgrade(pilots[_pilot].vehicleKey, stat));
+
+        private void ShowGarage()
+        {
+            if (gourdesText != null) gourdesText.text = $"{GameSettings.Gourdes} G";
+            string v = pilots[_pilot].vehicleKey;
+            for (int i = 0; i < upgradeLabels.Length && i < upgradeButtons.Length; i++)
+            {
+                int level = GameSettings.Upgrade(v, i);
+                int cost = GameSettings.UpgradeCost(level);
+                upgradeLabels[i].text = cost < 0 ? "MAX" : $"+ {cost}";
+                upgradeButtons[i].interactable = cost >= 0 && GameSettings.Gourdes >= cost;
+            }
+        }
+
+        private void BuyUpgrade(int stat)
+        {
+            if (!GameSettings.TryBuyUpgrade(pilots[_pilot].vehicleKey, stat)) return;
+            GameAudio.Play(Sfx.Coin);
+            ShowGarage();
         }
 
         private void SelectTrack(int index)

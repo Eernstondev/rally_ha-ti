@@ -32,11 +32,21 @@ namespace RallyAyiti.Kart
         public int DriftTier => _driftTier;
         public bool IsBoosting => _boostTimer > 0f;
         public bool IsStunned => _stunTimer > 0f;
+        public bool IsShielded => _shieldTimer > 0f;
+        public bool IsSlowed => _slowTimer > 0f;
+        public bool IsConfused => _confuseTimer > 0f;
         public KartInput LastInput => _input;
 
         public event Action<int> DriftReleased;
         public event Action Landed;
         public event Action Hit;
+        public event Action ShieldBlocked;
+
+        private float _shieldTimer;
+        private bool _shieldBreaks;
+        private float _slowTimer, _slowFactor = 1f;
+        private float _confuseTimer;
+        private float _accelScale = 1f, _steerScale = 1f;
 
         private IKartInput _source;
         private KartInput _input;
@@ -158,9 +168,65 @@ namespace RallyAyiti.Kart
             _speed = Mathf.Max(_speed, stats.maxSpeed * SpeedScale * _boostMultiplier * 0.9f);
         }
 
-        /// <summary>Touché par un bonus : tête-à-queue et perte de vitesse.</summary>
+        /// <summary>Protégé : les coups suivants sont ignorés. breakOnHit = le bouclier saute au premier coup (Parasòl).</summary>
+        public void ApplyShield(float duration, bool breakOnHit)
+        {
+            _shieldTimer = Mathf.Max(_shieldTimer, duration);
+            _shieldBreaks = breakOnHit;
+        }
+
+        /// <summary>Vitesse max réduite pendant un temps (orage Loraj).</summary>
+        public void ApplySlow(float duration, float factor)
+        {
+            if (IsShielded) { ConsumeShield(); return; }
+            _slowTimer = Mathf.Max(_slowTimer, duration);
+            _slowFactor = Mathf.Clamp(factor, 0.1f, 1f);
+        }
+
+        /// <summary>Direction perturbée (pikliz dans les yeux).</summary>
+        public void ApplyConfuse(float duration)
+        {
+            if (IsShielded) { ConsumeShield(); return; }
+            _confuseTimer = Mathf.Max(_confuseTimer, duration);
+        }
+
+        /// <summary>Poussée latérale (onde de lanbi, klaxon géant).</summary>
+        public void Push(Vector3 velocityChange)
+        {
+            if (IsShielded) return;
+            sphere.AddForce(velocityChange, ForceMode.VelocityChange);
+        }
+
+        /// <summary>Annule un tête-à-queue en cours (réparation, soin).</summary>
+        public void ClearStun()
+        {
+            _stunTimer = 0f;
+            _slowTimer = 0f;
+            _confuseTimer = 0f;
+        }
+
+        /// <summary>Améliorations du garage : niveaux 0 à 4 en vitesse, accélération et maniabilité.</summary>
+        public void SetUpgrades(int speed, int acceleration, int handling)
+        {
+            SpeedScale = 1f + 0.025f * speed;
+            _accelScale = 1f + 0.06f * acceleration;
+            _steerScale = 1f + 0.05f * handling;
+        }
+
+        private void ConsumeShield()
+        {
+            if (_shieldBreaks) _shieldTimer = 0f;
+        }
+
+        /// <summary>Touché par un bonus : le kart saute, tourne sur lui-même et perd sa vitesse.</summary>
         public void ApplyHit(float duration)
         {
+            if (IsShielded)
+            {
+                ConsumeShield();
+                ShieldBlocked?.Invoke();
+                return;
+            }
             if (_stunTimer > 0f) return;
             _stunDuration = Mathf.Max(0.1f, duration);
             _stunTimer = _stunDuration;
@@ -187,6 +253,9 @@ namespace RallyAyiti.Kart
         private void UpdateTimers(float dt)
         {
             if (_stunTimer > 0f) _stunTimer -= dt;
+            if (_shieldTimer > 0f) _shieldTimer -= dt;
+            if (_slowTimer > 0f) _slowTimer -= dt;
+            if (_confuseTimer > 0f) _confuseTimer -= dt;
             if (_boostTimer > 0f)
             {
                 _boostTimer -= dt;
@@ -196,14 +265,14 @@ namespace RallyAyiti.Kart
 
         private void UpdateSpeed(float dt)
         {
-            float top = stats.maxSpeed * SpeedScale * _boostMultiplier;
+            float top = stats.maxSpeed * SpeedScale * _boostMultiplier * (_slowTimer > 0f ? _slowFactor : 1f);
             float target;
             if (_stunTimer > 0f) target = 0f;
             else if (_input.Brake) target = _speed > 1f ? 0f : -stats.reverseSpeed;
             else target = _input.Throttle * top;
 
             float rate = target > _speed
-                ? (_boostTimer > 0f ? stats.boostAcceleration : stats.acceleration)
+                ? (_boostTimer > 0f ? stats.boostAcceleration : stats.acceleration * _accelScale)
                 : stats.deceleration;
             if (!_grounded) rate *= 0.2f;
 
@@ -213,6 +282,7 @@ namespace RallyAyiti.Kart
         private void UpdateSteering(float dt)
         {
             float steer = _stunTimer > 0f ? 0f : Mathf.Clamp(_input.Steer, -1f, 1f);
+            if (_confuseTimer > 0f) steer = Mathf.Clamp(steer * 0.4f + Mathf.Sin(Time.time * 7f) * 0.8f, -1f, 1f);
             bool driftPressed = _input.Drift && !_prevDrift;
 
             // Figure en l'air : appui sur Drift pendant un saut.
@@ -247,7 +317,7 @@ namespace RallyAyiti.Kart
             else
             {
                 float speedFactor = Mathf.Clamp01(Mathf.Abs(_speed) / (stats.maxSpeed * 0.25f));
-                yawRate = steer * stats.steering * speedFactor * (_speed < 0f ? -1f : 1f);
+                yawRate = steer * stats.steering * _steerScale * speedFactor * (_speed < 0f ? -1f : 1f);
             }
 
             if (!_grounded) yawRate *= stats.airSteerFactor;
@@ -301,6 +371,15 @@ namespace RallyAyiti.Kart
 
             float lean = -_input.Steer * stats.leanAngle * Speed01;
             visual.localRotation = Quaternion.Euler(0f, _visualYaw + spin, lean + _trickAngle);
+
+            // Touché : le kart décolle et retombe en tournant, comme dans les karts arcade.
+            float hop = 0f;
+            if (_stunTimer > 0f)
+            {
+                float k = Mathf.Clamp01((1f - _stunTimer / _stunDuration) / 0.7f);
+                hop = Mathf.Sin(k * Mathf.PI) * 1.3f;
+            }
+            visual.localPosition = new Vector3(0f, hop, 0f);
         }
     }
 }

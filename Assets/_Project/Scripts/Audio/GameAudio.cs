@@ -2,7 +2,11 @@ using UnityEngine;
 
 namespace RallyAyiti.Audio
 {
-    public enum Sfx { ItemPickup, KokoyeThrow, KokoyeHit, MangoSplat, Boost, CountdownBeep, CountdownGo, Finish, UiClick }
+    public enum Sfx
+    {
+        ItemPickup, KokoyeThrow, KokoyeHit, MangoSplat, Boost, CountdownBeep, CountdownGo, Finish, UiClick,
+        Coin, Lanbi, Thunder, Rocket, Shield, Power,
+    }
 
     /// <summary>Bruitages ponctuels : un son 2D pour l'interface, une petite réserve de sources 3D pour la course.</summary>
     public sealed class GameAudio : MonoBehaviour

@@ -5,14 +5,15 @@ using UnityEngine.UI;
 
 namespace RallyAyiti.UI
 {
-    /// <summary>Case du bonus tenu par le joueur, en haut au centre.</summary>
+    /// <summary>Case du bonus tenu par le joueur, en haut au centre : icône et nom du bonus.</summary>
     public sealed class ItemHUD : MonoBehaviour
     {
         [SerializeField] private RaceManager race;
         [SerializeField] private RectTransform slot;
         [SerializeField] private Image icon;
-        [SerializeField] private Sprite kokoye;
-        [SerializeField] private Sprite mango;
+        [SerializeField] private Text label;
+        [Tooltip("Une icône par valeur de PowerUpType (la première, None, reste vide).")]
+        [SerializeField] private Sprite[] icons;
 
         private PowerUpSystem _powerUps;
         private float _pop;
@@ -31,8 +32,10 @@ namespace RallyAyiti.UI
 
         private void OnChanged(PowerUpType type)
         {
+            int i = (int)type;
             icon.enabled = type != PowerUpType.None;
-            icon.sprite = type == PowerUpType.Kokoye ? kokoye : mango;
+            icon.sprite = icons != null && i < icons.Length ? icons[i] : null;
+            if (label != null) label.text = i < PowerUpSystem.Names.Length ? PowerUpSystem.Names[i].ToUpperInvariant() : "";
             if (type != PowerUpType.None) _pop = 0.25f;
         }
 

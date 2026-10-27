@@ -183,19 +183,22 @@ namespace RallyAyiti.EditorTools
             logo.raycastTarget = false;
 
             // Pilote
-            RectTransform pilot = Panel(canvas, "Pilot", new Vector2(0f, 0.5f), new Vector2(40f, -90f), new Vector2(620f, 560f),
+            RectTransform pilot = Panel(canvas, "Pilot", new Vector2(0f, 0.5f), new Vector2(40f, -100f), new Vector2(620f, 600f),
                 new Color(Night.r, Night.g, Night.b, 0.78f), null);
             Label(pilot, "Tit", display, 28, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(560f, 40f), Sun).text = "CHWAZI PILÒT";
             Text name = Label(pilot, "Non", display, 52, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(580f, 70f), Paper);
             Text vehicle = Label(pilot, "Machin", font, 32, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(560f, 44f), Lagoon);
-            Text tagline = Label(pilot, "Deviz", font, 27, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(540f, 70f),
+            Text tagline = Label(pilot, "Deviz", font, 27, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(560f, 40f),
                 new Color(Paper.r, Paper.g, Paper.b, 0.85f));
             tagline.fontStyle = FontStyle.Italic;
-            tagline.horizontalOverflow = HorizontalWrapMode.Wrap;
+            Text power = Label(pilot, "Pouvwa", font, 25, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -240f), new Vector2(580f, 40f), Sun);
 
-            RectTransform speed = StatRow(pilot, "Vitès", font, -282f, Sun);
-            RectTransform accel = StatRow(pilot, "Akselerasyon", font, -336f, Lagoon);
-            RectTransform handling = StatRow(pilot, "Kontwòl", font, -390f, Hibiscus);
+            (RectTransform speed, Button upSpeed, Text upSpeedText) = StatRow(pilot, "Vitès", font, -300f, Sun);
+            (RectTransform accel, Button upAccel, Text upAccelText) = StatRow(pilot, "Akselerasyon", font, -352f, Lagoon);
+            (RectTransform handling, Button upHandling, Text upHandlingText) = StatRow(pilot, "Kontwòl", font, -404f, Hibiscus);
+
+            // Cagnotte de gourdes, en haut à droite.
+            Text gourdes = Label(canvas, "Goud", display, 48, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-44f, -30f), new Vector2(420f, 70f), Sun);
 
             var arrowBg = new Color(1f, 1f, 1f, 0.12f);
             Button prev = UiButton(pilot, "Anvan", "<", display, new Vector2(0.5f, 0f), new Vector2(-190f, 34f), new Vector2(120f, 90f), arrowBg, Paper);
@@ -233,6 +236,8 @@ namespace RallyAyiti.EditorTools
                 e.FindPropertyRelative("name").stringValue = Pilots[i].Name;
                 e.FindPropertyRelative("vehicle").stringValue = VehicleLabels[i];
                 e.FindPropertyRelative("tagline").stringValue = Taglines[i];
+                e.FindPropertyRelative("vehicleKey").stringValue = Pilots[i].Model;
+                e.FindPropertyRelative("power").stringValue = $"POUVWA : {PilotPowers[i].name} — {PilotPowers[i].description}";
                 e.FindPropertyRelative("speed").floatValue = Mathf.Lerp(0.18f, 1f, Mathf.InverseLerp(24f, 31f, stats.maxSpeed));
                 e.FindPropertyRelative("acceleration").floatValue = Mathf.Lerp(0.18f, 1f, Mathf.InverseLerp(8f, 20f, stats.acceleration));
                 e.FindPropertyRelative("handling").floatValue = Mathf.Lerp(0.18f, 1f,
@@ -266,14 +271,24 @@ namespace RallyAyiti.EditorTools
             SetRef(menu, "goButton", go);
             SetRef(menu, "turntable", turntable);
             SetRef(menu, "music", Clip("Music_Menu_Twoubadou"));
+            SetRef(menu, "gourdesText", gourdes);
+            SetRef(menu, "powerText", power);
+            SetRefArray(menu, "upgradeButtons", new Object[] { upSpeed, upAccel, upHandling });
+            SetRefArray(menu, "upgradeLabels", new Object[] { upSpeedText, upAccelText, upHandlingText });
         }
 
-        /// <summary>Une ligne de caractéristique : nom à gauche, barre à droite. Renvoie la partie remplie.</summary>
-        private static RectTransform StatRow(Transform parent, string label, Font font, float y, Color color)
+        /// <summary>
+        /// Une ligne de caractéristique : nom, barre, bouton d'amélioration du garage.
+        /// Renvoie la partie remplie de la barre, le bouton et son texte (prix).
+        /// </summary>
+        private static (RectTransform, Button, Text) StatRow(Transform parent, string label, Font font, float y, Color color)
         {
-            Label(parent, label, font, 27, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(44f, y), new Vector2(220f, 40f), Paper).text = label;
-            RectTransform bar = Panel(parent, label + "Ba", new Vector2(0f, 1f), new Vector2(270f, y - 9f), new Vector2(300f, 22f),
+            Label(parent, label, font, 27, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(36f, y), new Vector2(220f, 40f), Paper).text = label;
+            RectTransform bar = Panel(parent, label + "Ba", new Vector2(0f, 1f), new Vector2(240f, y - 9f), new Vector2(230f, 22f),
                 new Color(1f, 1f, 1f, 0.14f), null);
+            Button up = UiButton(parent, label + "Plis", "+", font, new Vector2(0f, 1f), new Vector2(484f, y + 2f), new Vector2(110f, 44f), color, Night);
+            Text price = up.GetComponentInChildren<Text>();
+            price.fontSize = 22;
             var fillGo = new GameObject("Ranpli", typeof(RectTransform));
             fillGo.transform.SetParent(bar, false);
             var fill = (RectTransform)fillGo.transform;
@@ -285,7 +300,7 @@ namespace RallyAyiti.EditorTools
             img.type = Image.Type.Sliced;
             img.color = color;
             img.raycastTarget = false;
-            return fill;
+            return (fill, up, price);
         }
 
         private static (Button button, RectTransform card, Outline frame) TrackCard(Transform parent, string sprite, Vector2 pos)
@@ -389,7 +404,11 @@ namespace RallyAyiti.EditorTools
         private static void CreateGameAudio()
         {
             var audio = new GameObject("Son").AddComponent<GameAudio>();
-            string[] files = { "Item_Pickup", "Kokoye_Throw", "Kokoye_Hit", "Mango_Splat", "Boost", "Countdown_Beep", "Countdown_Go", "Finish_Fanfare", "UI_Click" };
+            string[] files =
+            {
+                "Item_Pickup", "Kokoye_Throw", "Kokoye_Hit", "Mango_Splat", "Boost", "Countdown_Beep", "Countdown_Go", "Finish_Fanfare", "UI_Click",
+                "Coin", "Lanbi", "Thunder", "Rocket", "Shield", "Power",
+            };
             SetRefArray(audio, "clips", System.Array.ConvertAll(files, f => (Object)Clip(f)));
         }
 

@@ -14,7 +14,7 @@ namespace RallyAyiti.Kart
         [Tooltip("Accélération automatique, recommandée sur mobile.")]
         [SerializeField] private bool autoAccelerate = true;
 
-        private InputAction _steer, _throttle, _brake, _drift, _item, _horn;
+        private InputAction _steer, _throttle, _brake, _drift, _item, _horn, _power;
 
         private void Awake() => EnsureActions();
 
@@ -49,24 +49,28 @@ namespace RallyAyiti.Kart
 
             _horn = new InputAction("Horn", InputActionType.Button, "<Keyboard>/h");
             _horn.AddBinding("<Gamepad>/buttonNorth");
+
+            _power = new InputAction("Power", InputActionType.Button, "<Keyboard>/f");
+            _power.AddBinding("<Keyboard>/r");
+            _power.AddBinding("<Gamepad>/leftShoulder");
         }
 
         private void OnEnable()
         {
             EnsureActions();
-            _steer.Enable(); _throttle.Enable(); _brake.Enable(); _drift.Enable(); _item.Enable(); _horn.Enable();
+            _steer.Enable(); _throttle.Enable(); _brake.Enable(); _drift.Enable(); _item.Enable(); _horn.Enable(); _power.Enable();
         }
 
         private void OnDisable()
         {
             if (_steer == null) return;
-            _steer.Disable(); _throttle.Disable(); _brake.Disable(); _drift.Disable(); _item.Disable(); _horn.Disable();
+            _steer.Disable(); _throttle.Disable(); _brake.Disable(); _drift.Disable(); _item.Disable(); _horn.Disable(); _power.Disable();
         }
 
         private void OnDestroy()
         {
             if (_steer == null) return;
-            _steer.Dispose(); _throttle.Dispose(); _brake.Dispose(); _drift.Dispose(); _item.Dispose(); _horn.Dispose();
+            _steer.Dispose(); _throttle.Dispose(); _brake.Dispose(); _drift.Dispose(); _item.Dispose(); _horn.Dispose(); _power.Dispose();
         }
 
         public KartInput ReadInput() => new()
@@ -77,6 +81,7 @@ namespace RallyAyiti.Kart
             Drift = _drift.IsPressed(),
             UseItem = _item.WasPressedThisFrame(),
             Horn = _horn.WasPressedThisFrame(),
+            Power = _power.WasPressedThisFrame(),
         };
     }
 }
