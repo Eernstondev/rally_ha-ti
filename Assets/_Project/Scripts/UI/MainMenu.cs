@@ -55,6 +55,12 @@ namespace RallyAyiti.UI
         [SerializeField] private Button[] upgradeButtons;
         [SerializeField] private Text[] upgradeLabels;
 
+        [Header("Pilotes à débloquer")]
+        [SerializeField] private CareerMenu flow;
+        [SerializeField] private GameObject lockBadge;
+        [SerializeField] private Text lockText;
+        [SerializeField] private Button buyPilotButton;
+
         [Header("Plateau")]
         [SerializeField] private Transform turntable;
         [SerializeField] private float spinSpeed = 22f;
@@ -69,6 +75,10 @@ namespace RallyAyiti.UI
         {
             _pilot = GameSettings.Pilot;
             if (_pilot < 0 || _pilot >= pilots.Length) _pilot = Mathf.Clamp(defaultPilot, 0, pilots.Length - 1);
+            // Un ancien choix peut désigner un pilote encore bloqué : on revient à un pilote de départ.
+            if (!Career.PilotUnlocked(_pilot)) _pilot = Mathf.Clamp(defaultPilot, 0, pilots.Length - 1);
+            GameSettings.Pilot = _pilot;
+            if (buyPilotButton != null) buyPilotButton.onClick.AddListener(BuyPilot);
             _track = Mathf.Max(0, Array.FindIndex(tracks, t => t.scene == GameSettings.Track));
 
             previousButton.onClick.AddListener(() => ChangePilot(-1));
@@ -130,21 +140,25 @@ namespace RallyAyiti.UI
 
         private void ReadShortcuts()
         {
+            // Raccourcis actifs seulement sur l'écran concerné (garage : pilotes ; course rapide : circuits et départ).
+            bool garageOpen = flow == null || flow.Current == CareerMenu.Screen.Garage;
+            bool quickOpen = flow == null || flow.Current == CareerMenu.Screen.Quick;
+            if (!garageOpen && !quickOpen) return;
             Keyboard kb = Keyboard.current;
             if (kb != null)
             {
-                if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame || kb.qKey.wasPressedThisFrame) ChangePilot(-1);
-                if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) ChangePilot(1);
-                if (kb.upArrowKey.wasPressedThisFrame) SelectTrack((_track - 1 + tracks.Length) % tracks.Length);
-                if (kb.downArrowKey.wasPressedThisFrame) SelectTrack((_track + 1) % tracks.Length);
-                if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) Go();
+                if (garageOpen && (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame || kb.qKey.wasPressedThisFrame)) ChangePilot(-1);
+                if (garageOpen && (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame)) ChangePilot(1);
+                if (quickOpen && kb.upArrowKey.wasPressedThisFrame) SelectTrack((_track - 1 + tracks.Length) % tracks.Length);
+                if (quickOpen && kb.downArrowKey.wasPressedThisFrame) SelectTrack((_track + 1) % tracks.Length);
+                if (quickOpen && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) Go();
             }
 
             Gamepad pad = Gamepad.current;
             if (pad == null) return;
-            if (pad.leftShoulder.wasPressedThisFrame) ChangePilot(-1);
-            if (pad.rightShoulder.wasPressedThisFrame) ChangePilot(1);
-            if (pad.startButton.wasPressedThisFrame) Go();
+            if (garageOpen && pad.leftShoulder.wasPressedThisFrame) ChangePilot(-1);
+            if (garageOpen && pad.rightShoulder.wasPressedThisFrame) ChangePilot(1);
+            if (quickOpen && pad.startButton.wasPressedThisFrame) Go();
         }
 
         private static void Fill(RectTransform bar, float value)
@@ -171,6 +185,22 @@ namespace RallyAyiti.UI
             pilotCounter.text = $"{_pilot + 1} / {pilots.Length}";
             if (powerText != null) powerText.text = p.power;
             _pop = 0f;
+
+            bool locked = !Career.PilotUnlocked(_pilot);
+            if (!locked) GameSettings.Pilot = _pilot;
+            if (lockBadge != null) lockBadge.SetActive(locked);
+            if (lockText != null && locked)
+            {
+                int series = Career.BossSeries(_pilot);
+                lockText.text = series >= 0
+                    ? $"BLOKE · Bat li nan dwèl « {Career.Series[series].Title} » oswa achte l {Career.PilotPrice} G"
+                    : $"BLOKE · Achte l {Career.PilotPrice} G";
+            }
+            if (buyPilotButton != null)
+            {
+                buyPilotButton.gameObject.SetActive(locked);
+                buyPilotButton.interactable = GameSettings.Gourdes >= Career.PilotPrice;
+            }
             ShowGarage();
         }
 
@@ -187,8 +217,16 @@ namespace RallyAyiti.UI
                 int level = GameSettings.Upgrade(v, i);
                 int cost = GameSettings.UpgradeCost(level);
                 upgradeLabels[i].text = cost < 0 ? "MAX" : $"+ {cost}";
-                upgradeButtons[i].interactable = cost >= 0 && GameSettings.Gourdes >= cost;
+                upgradeButtons[i].interactable = cost >= 0 && GameSettings.Gourdes >= cost && Career.PilotUnlocked(_pilot);
             }
+        }
+
+        private void BuyPilot()
+        {
+            if (!Career.TryBuyPilot(_pilot)) return;
+            GameAudio.Play(Sfx.Coin);
+            ShowPilot();
+            if (flow != null) flow.RefreshTopBar();
         }
 
         private void BuyUpgrade(int stat)
@@ -196,6 +234,7 @@ namespace RallyAyiti.UI
             if (!GameSettings.TryBuyUpgrade(pilots[_pilot].vehicleKey, stat)) return;
             GameAudio.Play(Sfx.Coin);
             ShowGarage();
+            if (flow != null) flow.RefreshTopBar();
         }
 
         private void SelectTrack(int index)
@@ -217,7 +256,8 @@ namespace RallyAyiti.UI
             if (_loading) return;
             _loading = true;
             GameAudio.Play(Sfx.CountdownGo, 0.7f);
-            GameSettings.Pilot = _pilot;
+            // Course rapide, hors carrière, avec le dernier pilote débloqué choisi au garage.
+            Career.Current = null;
             GameSettings.Track = tracks[_track].scene;
             SceneManager.LoadScene(tracks[_track].scene);
         }

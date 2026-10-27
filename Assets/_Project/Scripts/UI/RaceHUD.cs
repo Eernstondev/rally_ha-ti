@@ -37,6 +37,11 @@ namespace RallyAyiti.UI
         [SerializeField] private Button retryButton;
         [SerializeField] private Button menuButton;
         [SerializeField] private float resultsDelay = 2f;
+        [Header("Carrière")]
+        [Tooltip("Trois étoiles de l'écran de résultat (dorées si gagnées).")]
+        [SerializeField] private Image[] resultStars;
+        [Tooltip("Titre et objectif de l'épreuve, affichés au départ.")]
+        [SerializeField] private Text eventText;
 
         private int _pos = -1, _lap = -1, _speed = -1, _tenths = -1;
         private Coroutine _hide;
@@ -66,6 +71,13 @@ namespace RallyAyiti.UI
 
         private void Start()
         {
+            EventDef ev = Career.CurrentEvent;
+            if (eventText != null)
+            {
+                eventText.text = ev != null ? $"{Career.KindLabel(ev.Kind)} · {ev.Title.ToUpperInvariant()}\n<size=26>{Career.GoalText(ev)}</size>" : "";
+                eventText.supportRichText = true;
+                if (ev != null) StartCoroutine(HideEventText(11f));
+            }
             OnCoins(0);
             if (splat != null) splat.alpha = 0f;
             if (race.Player != null) _power = race.Player.GetComponent<PilotPower>();
@@ -191,6 +203,7 @@ namespace RallyAyiti.UI
         private IEnumerator ShowResults()
         {
             yield return new WaitForSeconds(resultsDelay);
+            string career = race.Player != null ? CareerResult(race.Player) : "";
             var sb = new StringBuilder();
             for (int i = 0; i < race.Standings.Count; i++)
             {
@@ -201,8 +214,54 @@ namespace RallyAyiti.UI
             }
             sb.AppendLine();
             sb.Append($"<color=#1fb5a8>+{race.Reward} goud</color>   ({race.PlayerCoins} pyès)   Total : {GameSettings.Gourdes} G");
+            if (career.Length > 0) sb.Append("\n").Append(career);
             resultsText.text = sb.ToString();
             resultsPanel.SetActive(true);
+        }
+
+        private IEnumerator HideEventText(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            if (eventText != null) eventText.text = "";
+        }
+
+        /// <summary>Épreuve de carrière : étoiles gagnées, bonus de gourdes pour les nouvelles étoiles, pilote débloqué.</summary>
+        private string CareerResult(LapTracker player)
+        {
+            EventDef ev = Career.CurrentEvent;
+            if (ev == null || !(Career.Current is { } c))
+            {
+                if (resultStars != null) foreach (Image s in resultStars) if (s != null) s.gameObject.SetActive(false);
+                return "";
+            }
+            int place = race.PositionOf(player);
+            int stars = Career.Evaluate(ev, player.Finished, place, player.FinishTime, race.PlayerCoins);
+            int gained = Career.Record(c.series, c.ev, stars);
+            int bonus = ev.Reward * gained / 3;
+            if (bonus > 0) GameSettings.Gourdes += bonus;
+            if (resultStars != null)
+                for (int i = 0; i < resultStars.Length; i++)
+                    if (resultStars[i] != null)
+                    {
+                        resultStars[i].gameObject.SetActive(true);
+                        resultStars[i].color = i < stars ? new Color(1f, 0.82f, 0.15f) : new Color(1f, 1f, 1f, 0.22f);
+                    }
+
+            var sb = new StringBuilder();
+            sb.Append($"<color=#f6c22b>{ev.Title}</color>   ");
+            sb.Append(ev.Kind switch
+            {
+                EventKind.KontLamont => $"Tan : {FormatTime(player.FinishTime)}",
+                EventKind.RanmaseGoud => $"Pyès : {race.PlayerCoins}",
+                _ => $"Plas : {place}",
+            });
+            if (bonus > 0) sb.Append($"\n<color=#1fb5a8>+{bonus} goud pou {gained} nouvo zetwal</color>");
+            if (ev.Kind == EventKind.Dwel && stars > 0 && ev.Boss >= 0 && !Career.PilotUnlocked(ev.Boss))
+            {
+                Career.UnlockPilot(ev.Boss);
+                sb.Append("\n<color=#e2367a>NOUVO PILÒT DEBLOKE !</color>");
+            }
+            return sb.ToString();
         }
 
         private static void Load(string scene)
