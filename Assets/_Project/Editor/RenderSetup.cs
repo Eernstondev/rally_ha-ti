@@ -167,7 +167,10 @@ namespace RallyAyiti.EditorTools
             Bool("m_SupportsHDR", true);
             Int("m_MSAA", 4);
             Float("m_RenderScale", 1f);
-            Float("m_ShadowDistance", 150f);
+            Float("m_ShadowDistance", 110f);
+            // Biais plus forts : évite les bandes d'« acné » des ombres sur la grande surface de la piste en pente.
+            Float("m_ShadowDepthBias", 2f);
+            Float("m_ShadowNormalBias", 1.5f);
             Int("m_ShadowCascadeCount", 2);
             Bool("m_SoftShadowsSupported", true);
             Int("m_MainLightShadowmapResolution", 2048);

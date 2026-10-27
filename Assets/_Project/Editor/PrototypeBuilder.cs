@@ -321,6 +321,9 @@ namespace RallyAyiti.EditorTools
                 Boost = Mat("Boost", Lagoon, 0.7f, 1.5f),
             };
             m.Sand.mainTextureScale = Vector2.one;
+            // Rampe de saut en planches (matériau à part pour régler la répétition sans toucher aux autres bois).
+            m.Ramp = ArtLibrary.Get("Wood", new Color(0.96f, 0.88f, 0.74f));
+            m.Ramp.mainTextureScale = new Vector2(4f, 3f);
             return m;
         }
 
