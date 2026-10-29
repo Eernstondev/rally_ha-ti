@@ -33,7 +33,7 @@ namespace RallyAyiti.EditorTools
     public static partial class PrototypeBuilder
     {
         private const string Root = "Assets/_Project";
-        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v11";
+        private const string AutoBuildKey = "RallyAyiti.AutoBuilt.v12";
         private const float HalfWidth = 7f;
         private const int Samples = 480;
         private const float WaterY = -0.35f;
@@ -585,8 +585,9 @@ namespace RallyAyiti.EditorTools
         private static void CreateStartLine(SplineContainer line, Mats m)
         {
             Frame f = FrameAt(line, 0f);
+            // Damier peint au sol, aux proportions de la texture (4:1) pour garder des cases carrées.
             Prim(PrimitiveType.Quad, "LigneArrivee", null, f.Pos + Vector3.up * 0.04f,
-                new Vector3(HalfWidth * 2f, 2.5f, 1f), m.Line, Quaternion.LookRotation(f.Fwd) * Quaternion.Euler(90f, 0f, 0f));
+                new Vector3(HalfWidth * 2f, HalfWidth * 0.5f, 1f), ArtLibrary.Get("Checker"), Quaternion.LookRotation(f.Fwd) * Quaternion.Euler(90f, 0f, 0f));
         }
 
         private static Transform CreateCheckpoints(SplineContainer line)

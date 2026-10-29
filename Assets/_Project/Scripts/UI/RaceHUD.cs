@@ -31,6 +31,8 @@ namespace RallyAyiti.UI
         [Tooltip("Halo qui s'allume autour du bouton quand le pouvoir est prêt.")]
         [SerializeField] private Image powerHalo;
         [SerializeField] private CanvasGroup splat;
+        [Tooltip("Traits de vitesse plein écran, visibles pendant les boosts.")]
+        [SerializeField] private Image speedLines;
         [Header("Arrivée")]
         [SerializeField] private GameObject resultsPanel;
         [SerializeField] private Text resultsText;
@@ -135,6 +137,17 @@ namespace RallyAyiti.UI
                 }
             }
 
+            if (speedLines != null)
+            {
+                // Apparaissent vite au boost, s'effacent doucement ; légère pulsation pour donner du mouvement.
+                bool boost = player.Kart.IsBoosting;
+                float target = boost ? 0.35f + 0.45f * player.Kart.Speed01 : 0f;
+                Color c = speedLines.color;
+                c.a = Mathf.MoveTowards(c.a, target, Time.deltaTime * (boost ? 4f : 1.5f));
+                speedLines.color = c;
+                speedLines.transform.localScale = Vector3.one * (1.04f + 0.04f * Mathf.Sin(Time.time * 30f));
+            }
+
             if (splat != null)
             {
                 _splat = Mathf.Max(0f, _splat - Time.deltaTime);
@@ -197,7 +210,24 @@ namespace RallyAyiti.UI
         {
             int pos = race.PositionOf(race.Player);
             Show(Places[Mathf.Clamp(pos - 1, 0, Places.Length - 1)], resultsDelay);
+            if (race.Player != null && race.Player.Finished && pos <= 3) StartCoroutine(Confetti(race.Player.transform, pos == 1 ? 7 : 4));
             if (resultsPanel != null) StartCoroutine(ShowResults());
+        }
+
+        private static readonly Color[] ConfettiColors =
+        {
+            new(0.96f, 0.76f, 0.17f), new(0.12f, 0.71f, 0.66f), new(0.93f, 0.3f, 0.45f), new(0.25f, 0.45f, 0.95f), Color.white,
+        };
+
+        /// <summary>Gerbes d'étoiles multicolores autour du kart du joueur quand il monte sur le podium.</summary>
+        private IEnumerator Confetti(Transform kart, int bursts)
+        {
+            for (int i = 0; i < bursts && kart != null; i++)
+            {
+                Vector3 p = kart.position + Vector3.up * 1.5f + Random.insideUnitSphere * 1.6f;
+                RaceFx.Sparkle(p, ConfettiColors[i % ConfettiColors.Length], 26);
+                yield return new WaitForSeconds(0.18f);
+            }
         }
 
         private IEnumerator ShowResults()

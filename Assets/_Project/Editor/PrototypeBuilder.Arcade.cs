@@ -123,6 +123,19 @@ namespace RallyAyiti.EditorTools
             splat.blocksRaycasts = false;
             splat.interactable = false;
 
+            // Traits de vitesse pendant les boosts : plein écran, juste au-dessus du pikliz.
+            var linesGo = new GameObject("TreVites", typeof(RectTransform));
+            linesGo.transform.SetParent(canvas, false);
+            linesGo.transform.SetSiblingIndex(1);
+            var linesRt = (RectTransform)linesGo.transform;
+            linesRt.anchorMin = Vector2.zero;
+            linesRt.anchorMax = Vector2.one;
+            linesRt.offsetMin = linesRt.offsetMax = Vector2.zero;
+            var lines = linesGo.AddComponent<Image>();
+            lines.sprite = ArtLibrary.LoadSprite("UI_SpeedLines.png");
+            lines.color = new Color(1f, 1f, 1f, 0f);
+            lines.raycastTarget = false;
+
             Text coins = Label(canvas, "Goud", display, 34, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-230f, -180f), new Vector2(300f, 50f), Sun);
 
             // Bouton de pouvoir du pilote : rond à gauche sous la place, il se remplit puis s'illumine (gâchette gauche).
@@ -158,6 +171,7 @@ namespace RallyAyiti.EditorTools
             SetRef(hud, "powerBackground", button.GetComponent<Image>());
             SetRef(hud, "powerHalo", halo);
             SetRef(hud, "splat", splat);
+            SetRef(hud, "speedLines", lines);
         }
 
         /// <summary>Barre de progression DEPA → FINI, flèches de virage sur les bords, bouton et menu pause.</summary>
